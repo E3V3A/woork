@@ -651,11 +651,11 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 	// I mean.
 	// 
         String query = String.format("SELECT * FROM %s WHERE %s=%d AND %s=%d AND %s=%d AND %s=%d",
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,                lat,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LON,                lng,
-                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,                signal);
+                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,			//"Dbi_measure"
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID,	//"bts_id"
+                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,                lat,	//"gpsd_lat"
+                DBTableColumnIds.DBI_MEASURE_GPSD_LON,                lng,	//"gpsd_lon"
+                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,                signal);	//"rx_signal"
         Cursor cursor = mDb.rawQuery(query, null);
         boolean exists = cursor.getCount() > 0;
         cursor.close();

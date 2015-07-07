@@ -2089,6 +2089,22 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         }
     }
 
+
+    /**
+     *  Description:    This checks if a cell with a given CID already exists
+     *                  in the (DBe_import) database.
+     */
+    public boolean openCellExists(int cellID) {
+        String qry = String.format("SELECT * FROM %s WHERE %s = %d",
+                DBTableColumnIds.DBE_IMPORT_TABLE_NAME,
+                DBTableColumnIds.DBE_IMPORT_CID,                cellID);
+        Cursor cursor = mDb.rawQuery(qry, null);
+        boolean exists = cursor.getCount() > 0;
+        //Log.v(TAG, mTAG + ": Does CID: " + cellID + " exist in DBe_import? " + exists);
+        cursor.close();
+        return exists;
+    }
+
     /*
         Check cid and lac is in Dbi_bts
         Replaces cellExists()

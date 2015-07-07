@@ -760,6 +760,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     public double[] getDefaultLocation(int mcc) {
         //Formatting queries like this so its more clear what is happening
         // :D  It's even more clear if you just use the real column names...
+        
+        /*
+          DBTableColumnIds.DEFAULT_LOCATION_LAT vs "lat" I think the new gives more detail:)
+          The real reason for your CONSTANTS is if I have to create a function to access this
+          table I wont have to continouslly type a hardcoded string "bla" this also goes for
+          when accessing other tables and really gets annoying having to retype a string ""
+          plus more chance the a typo will pop up.
+        */
         String query = String.format("SELECT %s,%s FROM %s WHERE %s = %d",
                 DBTableColumnIds.DEFAULT_LOCATION_LAT,
                 DBTableColumnIds.DEFAULT_LOCATION_LON,
@@ -923,9 +931,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *   In addition the OCID data often contain unexplained negative values for one or both of:
      *    - "samples"
      *    - "range"
-     *
-     *   TODO:  Also we should probably change this function name from:
-     *          "updateOpenCellID" to "populateDBe_import"
      */
     public boolean populateDBeImport() {
         //This was not finding file on my samsung S5

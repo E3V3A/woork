@@ -29,6 +29,8 @@ import com.SecUpwN.AIMSICD.adapters.MeasuredCellStrengthCardInflater;
 import com.SecUpwN.AIMSICD.adapters.OpenCellIdCardInflater;
 import com.SecUpwN.AIMSICD.adapters.SilentSmsCardData;
 import com.SecUpwN.AIMSICD.adapters.SilentSmsCardInflater;
+import com.SecUpwN.AIMSICD.adapters.UniqueBtsCardInflater;
+import com.SecUpwN.AIMSICD.adapters.UniqueBtsItemData;
 import com.SecUpwN.AIMSICD.constants.DBTableColumnIds;
 import com.SecUpwN.AIMSICD.constants.Examples;
 import com.SecUpwN.AIMSICD.enums.StatesDbViewer;
@@ -195,19 +197,21 @@ public class DbViewerFragment extends Fragment {
             switch (mTableSelected) {
                 case UNIQUE_BTS_DATA: {
                     //TODO this is a pain because in Dbi_bts there is no lat lon rss so I have to get data from Dbi_measure also.
-                    BaseInflaterAdapter<CardItemData> adapter
-                            = new BaseInflaterAdapter<>(new CellCardInflater());
+                    BaseInflaterAdapter<UniqueBtsItemData> adapter
+                            = new BaseInflaterAdapter<>(new UniqueBtsCardInflater());
                     int count = tableData.getCount();
                     while (tableData.moveToNext()) {
-                        CardItemData data = new CardItemData(
-                                "CID: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_CID))),
-                                "LAC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_LAC))),
+                        UniqueBtsItemData data = new UniqueBtsItemData(
                                 "RAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_RAT)),
                                 "MCC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_MCC))),
                                 "MNC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_MNC))),
+                                "LAC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_LAC))),
+                                "CID: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_CID))),
+                                "PSC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_PSC))),
                                 "Time First: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_FIRST)),
-                                "" + (tableData.getPosition() + 1) + " / " + count);
-                        adapter.addItem(data, false);
+                                "Time Last: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_LAST)));
+                               // "" + (tableData.getPosition() + 1) + " / " + count);
+                        adapter.addItem(data,false);
                     }
                     if (!tableData.isClosed()) {
                         tableData.close();
@@ -217,7 +221,7 @@ public class DbViewerFragment extends Fragment {
                 }
 
                 case BTS_MEASUREMENTS: {
-                    
+
                     BaseInflaterAdapter<CardItemData> adapter
                             = new BaseInflaterAdapter<>(new CellCardInflater());
                     int count = tableData.getCount();
@@ -512,19 +516,6 @@ public class DbViewerFragment extends Fragment {
                     return adapter;
                 }
                 */
-
-                /**
-                 * TODO:
-                 * This is the default for all other tables, so since we have different
-                 * info in the new tables we need to create individual entries
-                 * (instead of default) for these:
-                 *
-                 *  - "Unique BTS Data" (DBi_bts)
-                 *  - "BTS Measurements" (DBi_measure)
-                 *
-                 * Once implemented, remove this or make different default.
-                 */
-                //default:
 
             }
         } else {

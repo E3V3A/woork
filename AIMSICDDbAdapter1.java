@@ -269,7 +269,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      */
     // @banjaxbanjo Please change this name to what we discussed in other email, like "insertDBiBTS" or DBiMeasure
     // or whatever is in the comments below...
-    public long insertCell( int lac,
+    //@EVA this function is not used anymore insertBTS takes care of this now
+/*    public long insertCell( int lac,
                             int cellID,
                             int netType,
                             double latitude,
@@ -312,7 +313,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         }
         return 0;
     }
-
+*/
     /**
      *  Description:    Inserts (API?) Cell Details into TABLE_DBI_BTS:DBi_bts/measure (cellinfo)
      *
@@ -324,7 +325,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *          and we might wanna rename "insertCell" to "addMeasurement" ?? <<< Yes here!
      *
      */
-    public long insertCell(Cell cell) {
+/*    public long insertCell(Cell cell) {
 
         // I think we might need to add an BTS even if Lat/Lon is 0,
         // since lat/lon can be 0 if no location have been found. (Can they?)
@@ -359,7 +360,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         }
         return 0;
     }
-
+*/
     /**
      *  Description:    This method is used to insert and populate the downloaded or previously
      *                  backed up OCID details into the DBe_import (opencellid) database table.
@@ -378,7 +379,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      */
 	// @banjaxbanjo  Please change this name to reflect the name of the table where it goes...
 	// Like "insertDBeImport" ?
-    long insertOpenCell(
+	//@ EVA NOT USED ANYMORE insertBTS takes carensertDbeImport
+/*    long insertOpenCell(
                         String DBsrc,			// 
                         String RAT,      // new  	// 
                         int mcc,
@@ -428,8 +430,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *TODO eva are we putting other colums in here to like DBsource,time_first,time_last
      * 
      */
-    long insertOpenCell(
-                        String DBsource,//<--- What is this?	// This can be text or integer, specifying where the data 
+/*    long insertOpenCell(
+                        String DBsource,//<--- @EVA sure >What is this?	// This can be text or integer, specifying where the data 
                         					// is coming from like OCID, MLS, etc. 
                         String rat,
                         int mcc,
@@ -480,15 +482,15 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             return mDb.insert(DBTableColumnIds.DBE_IMPORT_TABLE_NAME, null, cellIDValues);
         }
     }
-
+*/
     /**
      * Inserts API location details into the measurement Database (locationinfo)
      *
      * @return row id or -1 if error
      *
-     * TODO: TABLE_DBI_MEASURE:DBi_measure
+     * TODO: TABLE_DBI_MEASURE:DBi_measure @Eva insertBTS takes care of this now
      */
-    public long insertLocation( int lac,
+/*    public long insertLocation( int lac,
                                 int cellID,
                                 int netType,
                                 double latitude,
@@ -529,7 +531,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         return 0;
     }
-
+*/
     /**
      * Delete cell info - for use in tests
      *

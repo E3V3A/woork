@@ -583,7 +583,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     /**
      * Returns Location Information (DBi_meas) database contents
      *
-     * TODO not used anymore has replacement
+     * 
      */
     public Cursor getLocationData() {
         return returnDBiMeasure();
@@ -599,7 +599,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *          DbViewerFragment.java
      *          MapViewerOsmDroid.java
      *
-     *TODO not used anymore has replacement
+     *
      */
     public Cursor getOpenCellIDData() {
         return returnDBeImport();
@@ -607,7 +607,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     /**
      * Returns Default MCC Locations (defaultlocation) database contents
-     * TODO not used anymore has replacement
+     * 
      */
     public Cursor getDefaultMccLocationData() {
         return returnDefaultLocation();

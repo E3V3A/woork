@@ -643,6 +643,13 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 	// I'd much prefer to have the "HAck" format as shown in the beginning of this file. 
 	// As it is now, it's hard to read... (at least for me)
+	// @EVA this gets really annoying and takes alot longer for coders to do
+	// Having a CONSTANT saves a lot of time and its pretty much telling you
+	// what the table is DBI_MEASURE_GPSD_LAT and when accessing from a class
+	// outside the database this also comes in useful. Trust me if you'd to 
+	// code this class and others accessing the database you would know what
+	// I mean.
+	// 
         String query = String.format("SELECT * FROM %s WHERE %s=%d AND %s=%d AND %s=%d AND %s=%d",
                 DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
                 DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID,

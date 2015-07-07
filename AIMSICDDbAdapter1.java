@@ -146,6 +146,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         mTables = new String[]{
 
                 //I am trying to keep in same order and aimsicd.sql script
+                //@banjaxbanjo Great! 
+                // Please also add the names as specified in the DB layout in the comments, for easy reading x-ref. 
                 DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,       // Default MCC for each country
                 DBTableColumnIds.API_KEYS_TABLE_NAME,               // API keys for OPEN_CELL_ID
                 DBTableColumnIds.COUNTER_MEASURES_TABLE_NAME,       // Counter Measures thresholds and description
@@ -265,6 +267,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      * TODO: This should become TABLE_DBI_BTS: DBi_bts | measure
      *  TODO eva
      */
+    // @banjaxbanjo Please change this name to what we discussed in other email, like "insertDBiBTS" or DBiMeasure
+    // or whatever is in the comments below...
     public long insertCell( int lac,
                             int cellID,
                             int netType,
@@ -274,8 +278,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                             int mcc,
                             int mnc,
                             double accuracy,
-                            double speed,
-                            double direction,
+                            double speed,		// Remove!
+                            double direction,		// Remove
                             String networkType,
                             long measurementTaken
     ) {
@@ -317,7 +321,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      * @return row id or -1 if error
      *
      * TODO:    This should become TABLE_DBI_BTS: DBi_bts | measure
-     *          and we might wanna rename "insertCell" to "addMeasurement" ??
+     *          and we might wanna rename "insertCell" to "addMeasurement" ?? <<< Yes here!
      *
      */
     public long insertCell(Cell cell) {
@@ -328,6 +332,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         //
         if (cell.getCID() != Integer.MAX_VALUE && (cell.getLat() != 0.0 && cell.getLon() != 0.0)) {
             // Populate the named DB table columns with the values provided
+            // @banjaxbanjo It would be easier to read if you leave the actual SQL table column names here, rather 
+            // than trying to outsmart ourselves with variables found elsewhere!
             ContentValues cellValues = new ContentValues();
             cellValues.put(DBTableColumnIds.DBI_BTS_LAC,    cell.getLAC());
             cellValues.put(DBTableColumnIds.DBI_BTS_CID,    cell.getCID());
@@ -337,8 +343,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             //cellValues.put("Signal",    cell.getDBM());
             cellValues.put(DBTableColumnIds.DBI_BTS_MCC,       cell.getMCC());
             cellValues.put(DBTableColumnIds.DBI_BTS_MNC,       cell.getMNC());
-            //cellValues.put("Accuracy",  cell.getAccuracy());
-            //cellValues.put("Speed",     cell.getSpeed());
+            //cellValues.put("Accuracy",  cell.getAccuracy());  //Remove!
+            //cellValues.put("Speed",     cell.getSpeed());	//Remove!
             //cellValues.put("Direction", cell.getBearing());
             cellValues.put(DBTableColumnIds.DBI_BTS_TIME_FIRST, cell.getTimestamp());
             cellValues.put(DBTableColumnIds.DBI_BTS_TIME_LAST, cell.getTimestamp());
@@ -370,14 +376,15 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      * @return row id or -1 if error
      *
      */
-
+	// @banjaxbanjo  Please change this name to reflect the name of the table where it goes...
+	// Like "insertDBeImport" ?
     long insertOpenCell(
-                        String DBsrc,
-                        String RAT,      // new
+                        String DBsrc,			// 
+                        String RAT,      // new  	// 
                         int mcc,
                         int mnc,
                         int lac,
-                        int cellID,
+                        int cellID,	
                         int psc,
                         double latitude,
                         double longitude,
@@ -419,9 +426,11 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *
      * @return row id or -1 if error
      *TODO eva are we putting other colums in here to like DBsource,time_first,time_last
+     * 
      */
     long insertOpenCell(
-                        String DBsource,//<--- What is this?
+                        String DBsource,//<--- What is this?	// This can be text or integer, specifying where the data 
+                        					// is coming from like OCID, MLS, etc. 
                         String rat,
                         int mcc,
                         int mnc,
@@ -441,8 +450,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     ) {
 
         // Populate the named DB table columns with the values provided
-        ContentValues cellIDValues = new ContentValues();
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_RAT,           DBsource );
+        // Again, please use actual column names...
+        ContentValues cellIDValues = new ContentValues();		// << Please change name to DBeValues if it make sense?
+        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_DBSOURCE,           DBsource ); // << TYPO ??? 
         cellIDValues.put(DBTableColumnIds.DBE_IMPORT_RAT,           rat );
         cellIDValues.put(DBTableColumnIds.DBE_IMPORT_MCC,           mcc);
         cellIDValues.put(DBTableColumnIds.DBE_IMPORT_MNC,           mnc);
@@ -498,6 +508,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             locationValues.put(DBTableColumnIds.DBI_MEASURE_GPSD_LON,       String.valueOf(longitude));
             locationValues.put(DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,    signalInfo);
             //locationValues.put("Connection", cellInfo); // has multiple items... //TODO where does this go in DBi_measure?
+
+		// @banjaxbanjo  Dbi_measure and Dbi_bts are connected tables as shown in the diagram, 
+		// thus every measurement in DBi_measure, has a corresponding id (bts_id) that will give 
+		// lac and so on.
+		// "connection" should go at the very end of DBi_measure table as TEXT:
+		// It should correspond to the:
+		// "DATA_ACTIVITY, DATA_CONNECTION,CALL_STATE,SERVICE_STATE" for example:
+		// "IO,Di,Idle,in" (or something like that)
 
             // TODO:    This is a strange check, why are we checking for Lat,Lon,Signal?
             // URGENT:  This need to be thought about...
@@ -621,16 +639,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      */
     boolean locationExists(int cellID, double lat, double lng, int signal) {
 
+	// I'd much prefer to have the "HAck" format as shown in the beginning of this file. 
+	// As it is now, it's hard to read... (at least for me)
         String query = String.format("SELECT * FROM %s WHERE %s=%d AND %s=%d AND %s=%d AND %s=%d",
                 DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,
-                cellID,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,
-                lat,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LON,
-                lng,
-                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,
-                signal);
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID,
+                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,                lat,
+                DBTableColumnIds.DBI_MEASURE_GPSD_LON,                lng,
+                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,                signal);
         Cursor cursor = mDb.rawQuery(query, null);
         boolean exists = cursor.getCount() > 0;
         cursor.close();
@@ -657,8 +673,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     public boolean openCellExists(int cellID) {
         String qry = String.format("SELECT * FROM %s WHERE %s = %d",
                 DBTableColumnIds.DBE_IMPORT_TABLE_NAME,
-                DBTableColumnIds.DBE_IMPORT_CID,
-                cellID);
+                DBTableColumnIds.DBE_IMPORT_CID,                cellID);
         Cursor cursor = mDb.rawQuery(qry, null);
         boolean exists = cursor.getCount() > 0;
         //Log.v(TAG, mTAG + ": Does CID: " + cellID + " exist in DBe_import? " + exists);
@@ -692,8 +707,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     public boolean checkLAC(Cell cell) {
         String query = String.format("SELECT * FROM %s WHERE %s = %d",
                 DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_CID,
-                cell.getCID());
+                DBTableColumnIds.DBI_BTS_CID,                cell.getCID());
 
         Cursor bts_cursor = mDb.rawQuery(query,null);
 
@@ -710,7 +724,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                 insertEventLog(MiscUtils.getCurrentTimeStamp(),
                         cell.getLAC(),
                         cell.getCID(),
-                        cell.getPSC(),//This is giving weird values like 21478364... is this right?
+                        cell.getPSC(),//This is giving weird values like 21478364... is this right?  	<< NO! Should be <=512 AFAICR
                         String.valueOf(cell.getLat()),
                         String.valueOf(cell.getLon()),
                         (int)cell.getAccuracy(),//TODO cell.getAccuracy() = double & EventLog Column = int? is GPS Api returning int or double for ACC?
@@ -743,12 +757,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     public double[] getDefaultLocation(int mcc) {
         //Formatting queries like this so its more clear what is happening
+        // :D  It's even more clear if you just use the real column names...
         String query = String.format("SELECT %s,%s FROM %s WHERE %s = %d",
                 DBTableColumnIds.DEFAULT_LOCATION_LAT,
                 DBTableColumnIds.DEFAULT_LOCATION_LON,
                 DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,
-                DBTableColumnIds.DEFAULT_LOCATION_MCC,
-                mcc);
+                DBTableColumnIds.DEFAULT_LOCATION_MCC,                mcc);
 
         double[] loc = new double[2];
         Cursor cursor = mDb.rawQuery(query, null);
@@ -888,15 +902,15 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *   7 range                    INTEGER
      *   8 samples                  INTEGER
      *   9 changeable               INTEGER
-     *   10 radio                   TEXT aka rat
-     *   11 rnc                     INTEGER
-     *   12 cid                     INTEGER
-     *   13 psc                     INTEGER
-     *   14 tac
-     *   15 pci
-     *   16 sid
-     *   17 nid
-     *   18 bid
+     *   10 radio                   TEXT 	// aka RAT
+     *   11 rnc                     INTEGER	// 
+     *   12 cid                     INTEGER	// GSM,, UMTS, LTE
+     *   13 psc                     INTEGER	// UMTS
+     *   14 tac					// LTE
+     *   15 pci					// LTE
+     *   16 sid					// CDMA
+     *   17 nid					// CDMA
+     *   18 bid					// CDMA
      *
      *   54.63376,25.160243,246,3,20,1294,0,-1,1,1,GSM,,,,,,,,
      *
@@ -1020,7 +1034,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
                        insertDBeImport(
-                                "http://opencellid.org/",   //DBsource TODO <---is this right?
+                                "http://opencellid.org/",   //DBsource TODO <---is this right? 	<< YES, but lets use an inetger
+                                								// 0=unknown,1=OCID,2=MLS,3=SkyHook etc 
                                 radio,                      // RAT
                                 Integer.parseInt(mcc),      // MCC
                                 Integer.parseInt(mnc),      // MNC
@@ -1033,9 +1048,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                 Integer.parseInt(avg_sig),  // avg_signal [dBm]
                                 Integer.parseInt(range),    // avg_range [m]
                                 Integer.parseInt(samples),  // samples
-                                "no_time",//TODO where are time_first in csv file?
+                                "no_time",//TODO where are time_first in csv file?	<< There aren't!! (Bad design decision of OCID)
                                 "no_time",//TODO where are time_last in csv file?
-                                0//TODO is this ok for rej_cause
+                                0//TODO is this ok for rej_cause			<< YEP, it will be updated later and elsewhere (See #253)
                         );
                         //Log.d(TAG,"Dbe_import tables inserted="+i);
                     }
@@ -1148,7 +1163,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                     break;
                                 case DBTableColumnIds.DBI_BTS_TABLE_NAME:
                                     insertBTS(
-                                            records.get(i)[1].toString(),    // RAT
+                                            records.get(i)[1].toString(),    		// RAT		// Move to DBi_measure:RAT
                                             Integer.parseInt(records.get(i)[2]),    // MCC
                                             Integer.parseInt(records.get(i)[3]),    // MNC
                                             Integer.parseInt(records.get(i)[4]),    // LAC
@@ -1156,9 +1171,11 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                             Integer.parseInt(records.get(i)[6]),    // PSC
                                             Integer.parseInt(records.get(i)[7]),    // T3212
                                             Integer.parseInt(records.get(i)[8]),    // A5x
-                                            Integer.parseInt(records.get(i)[9]),    // ST_id
-                                            records.get(i)[10].toString(),          // First Time
-                                            records.get(i)[11].toString()           // last Time
+                                            Integer.parseInt(records.get(i)[9]),    // ST_id (SectorType)
+                                            records.get(i)[10].toString(),          // time_first
+                                            records.get(i)[11].toString()           // time_last
+                                            // ADD !! 					//gps_lat
+                                            // ADD !! 					//gps_lon 
                                     );
 
                                     break;
@@ -1171,14 +1188,15 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                             records.get(i)[4].toString(),             // gpsd_lat
                                             records.get(i)[5].toString(),             // gpsd_lon
                                             Integer.parseInt(records.get(i)[6]),      // gpsd_accuracy
-                                            records.get(i)[7].toString(),             // gpse_lat
-                                            records.get(i)[8].toString(),             // gpse_lon
-                                            records.get(i)[9].toString(),             // speed
+                                            records.get(i)[7].toString(),             // gpse_lat	// obsolete with DBi_bts:gps_lat/lon
+                                            records.get(i)[8].toString(),             // gpse_lon	// obsolete ^^
+                                            records.get(i)[9].toString(),             // speed		// remove
                                             records.get(i)[10].toString(),            // bb_power
                                             records.get(i)[11].toString(),            // bb_rf_temp
                                             records.get(i)[12].toString(),            // tx_power
                                             records.get(i)[13].toString(),            // rx_signal
                                             records.get(i)[14].toString(),            // rx_stype
+                                            // ADD !!							// RAT (integer?)  From DBi_BTS:RAT
                                             records.get(i)[15].toString(),            // BCCH
                                             records.get(i)[16].toString(),            // TMSI
                                             Integer.parseInt(records.get(i)[17]),     // TA
@@ -1186,7 +1204,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                             Integer.parseInt(records.get(i)[19]),     // BER
                                             records.get(i)[20].toString(),            // AvgEcNo
                                             Integer.parseInt(records.get(i)[21]),     // isSubmitted
-                                            Integer.parseInt(records.get(i)[22])     // isNeighbour
+                                            Integer.parseInt(records.get(i)[22])      // isNeighbour
+                                            // ADD !!							// "connection" 
                                     );
 
                                     break;
@@ -1223,7 +1242,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                     break;
                                 case DBTableColumnIds.SECTOR_TYPE_TABLE_NAME:
                                     insertSectorType(
-                                            records.get(i)[1].toString()
+                                            records.get(i)[1].toString()		// description 	TEXT
                                     );
                                     break;
                                 case DBTableColumnIds.DETECTION_STRINGS_TABLE_NAME:

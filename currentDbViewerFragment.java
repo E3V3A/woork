@@ -217,7 +217,7 @@ public class DbViewerFragment extends Fragment {
                 }
 
                 case BTS_MEASUREMENTS: {
-                    //TODO this is a pain because in Dbi_bts there is no lat lon rss so I have to get data from Dbi_measure also.
+                    
                     BaseInflaterAdapter<CardItemData> adapter
                             = new BaseInflaterAdapter<>(new CellCardInflater());
                     int count = tableData.getCount();

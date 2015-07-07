@@ -139,6 +139,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         //return writable database
         mDb = SQLiteDatabase.openDatabase(DB_LOCATION, null, SQLiteDatabase.OPEN_READWRITE);
+
+        //This will return the database as open so we dont need to use .open
+        //when app is exiting we use new AIMSICDDbAdapter(getApplicationContext()).close(); to close it
         this.getWritableDatabase();
         mTables = new String[]{
 
@@ -174,8 +177,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             } catch (IOException e) {
                 throw new Error("Error copying database\n"+e.toString());
             }
-            //only use this if data not pre compiled
-            // try{insertFirstSms();}catch (Exception e){Log.i("DbHelper>>>","error installing sms");}
+
         }
         return false;
     }
@@ -253,266 +255,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     //      Populate the DB tables  (INSERT)
     // ====================================================================
 
-
-
-    /**
-     * Inserts (API?) Cell Details into Database (cellinfo) TABLE_DBI_BTS:DBi_bts/measure
-     *
-     * @return row id or -1 if error
-     *
-     * TODO: This should become TABLE_DBI_BTS: DBi_bts | measure
-     *  TODO not used anymore insertBTS takes care of this
-     */
-/*    public long insertCell( int lac,
-                            int cellID,
-                            int netType,
-                            double latitude,
-                            double longitude,
-                            int signalInfo,
-                            int mcc,
-                            int mnc,
-                            double accuracy,
-                            double speed,
-                            double direction,
-                            String networkType,
-                            long measurementTaken
-    ) {
-
-        if (cellID != -1 && (latitude != 0.0 && longitude != 0.0)) {
-            //Populate Content Values for Insert or Update
-            ContentValues cellValues = new ContentValues();
-            cellValues.put(DBTableColumnIds.DBI_BTS_LAC,           lac);
-            cellValues.put(DBTableColumnIds.DBI_BTS_CID,        cellID);
-            cellValues.put(DBTableColumnIds.DBI_BTS_RAT,           netType);
-            //cellValues.put("Lat",           latitude);
-            //cellValues.put("Lng",           longitude);
-            //cellValues.put("Signal",        signalInfo);
-            cellValues.put(DBTableColumnIds.DBI_BTS_MCC,           mcc);
-            cellValues.put(DBTableColumnIds.DBI_BTS_MNC,           mnc);
-            //cellValues.put("Accuracy",      accuracy);
-            //cellValues.put("Speed",         speed);
-            //cellValues.put("Direction",     direction);
-            //cellValues.put("NetworkType",   networkType);
-            cellValues.put(DBTableColumnIds.DBI_BTS_TIME_FIRST, measurementTaken);
-            cellValues.put(DBTableColumnIds.DBI_BTS_TIME_LAST, measurementTaken);
-
-            if (cellExists(cellID)) {
-                Log.v(TAG, mTAG + ": Cell info updated in local db: " + cellID);
-                return mDb.update( DBTableColumnIds.DBI_BTS_TABLE_NAME, cellValues, "CID=?", new String[]{Integer.toString(cellID)} );
-            } else {
-                Log.v(TAG,  mTAG + ": New Cell found, insert into local db:: " + cellID);
-                return mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, cellValues);
-            }
-        }
-        return 0;
-    }
-*/
-    /**
-     *  Description:    Inserts (API?) Cell Details into TABLE_DBI_BTS:DBi_bts/measure (cellinfo)
-     *
-     *  Issues:         See insertOpenCell() below...
-     *
-     * @return row id or -1 if error
-     *
-     * TODO:    This should become TABLE_DBI_BTS: DBi_bts | measure
-     *          and we might wanna rename "insertCell" to "addMeasurement" ??
-     *TODO: not used anymore insertBTS takes care of this now
-     */
-/*    public long insertCell(Cell cell) {
-
-        // I think we might need to add an BTS even if Lat/Lon is 0,
-        // since lat/lon can be 0 if no location have been found. (Can they?)
-        // --E:V:A
-        //
-        if (cell.getCID() != Integer.MAX_VALUE && (cell.getLat() != 0.0 && cell.getLon() != 0.0)) {
-            // Populate the named DB table columns with the values provided
-            ContentValues cellValues = new ContentValues();
-            cellValues.put(DBTableColumnIds.DBI_BTS_LAC,    cell.getLAC());
-            cellValues.put(DBTableColumnIds.DBI_BTS_CID,    cell.getCID());
-            cellValues.put(DBTableColumnIds.DBI_BTS_RAT,    cell.getNetType());
-            //cellValues.put("Lat",       cell.getLat());
-            //cellValues.put("Lng",       cell.getLon());
-            //cellValues.put("Signal",    cell.getDBM());
-            cellValues.put(DBTableColumnIds.DBI_BTS_MCC,       cell.getMCC());
-            cellValues.put(DBTableColumnIds.DBI_BTS_MNC,       cell.getMNC());
-            //cellValues.put("Accuracy",  cell.getAccuracy());
-            //cellValues.put("Speed",     cell.getSpeed());
-            //cellValues.put("Direction", cell.getBearing());
-            cellValues.put(DBTableColumnIds.DBI_BTS_TIME_FIRST, cell.getTimestamp());
-            cellValues.put(DBTableColumnIds.DBI_BTS_TIME_LAST, cell.getTimestamp());
-
-            if (cellExists(cell.getCID())) {
-                Log.v(TAG,  mTAG + ": CID info updated in local db (DBi): " + cell.getCID());
-                return mDb.update(DBTableColumnIds.DBI_BTS_TABLE_NAME, cellValues,"CID=?", new String[]{Integer.toString(cell.getCID())});
-            } else {
-                Log.v(TAG,  mTAG + ": New CID found, insert into local db (DBi):: " + cell.getCID());
-                return mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, cellValues);
-            }
-        }
-        return 0;
-    }
-*/
-    /**
-     *  Description:    This method is used to insert and populate the downloaded or previously
-     *                  backed up OCID details into the DBe_import (opencellid) database table.
-     *                  It also prevents adding multiple entries of the same cell-id, when OCID
-     *                  downloads are repeated.
-     *
-     *  Issues:     [ ] None, but see GH issue #303 for a smarter OCID download handler.
-     *
-     *  Notes:       a) Move to:  CellTracker.java  see:
-     *                  https://github.com/SecUpwN/Android-IMSI-Catcher-Detector/issues/290#issuecomment-72303486
-     *               b) OCID CellID is of the "long form" (>65535) when available...
-     *               c) is also used to where CSV data is populating the opencellid table.
-     *
-     * @return row id or -1 if error
-     *
-     * TODO this is not used anymore as insertDbeImport takes care of this now
-     *
-     */
-
-/*    long insertOpenCell(
-                        String DBsrc,
-                        String RAT,      // new
-                        int mcc,
-                        int mnc,
-                        int lac,
-                        int cellID,
-                        int psc,
-                        double latitude,
-                        double longitude,
-                        int isGPSexact, // new
-                        int range,      // new
-                        int avgSigStr,
-                        int samples,
-                        String time_first,
-                        String time_last,
-                        int rej_cause // new
-    ) {
-        return insertOpenCell(
-                DBsrc,
-                RAT,
-                mcc,mnc,
-                lac,cellID,psc,
-                latitude,longitude,
-                isGPSexact,
-                range,
-                avgSigStr,
-                samples,
-                time_first,
-                time_last,
-                0,true);
-    }
-    /**
-     *  Description:    This method is used to insert and populate the downloaded or previously
-     *                  backed up OCID details into the DBe_import (opencellid) database table.
-     *                  It also prevents adding multiple entries of the same cell-id, when OCID
-     *                  downloads are repeated.
-     *
-     *  Issues:     [ ] None, but see GH issue #303 for a smarter OCID download handler.
-     *
-     *  Notes:       a) Move to:  CellTracker.java  see:
-     *                  https://github.com/SecUpwN/Android-IMSI-Catcher-Detector/issues/290#issuecomment-72303486
-     *               b) OCID CellID is of the "long form" (>65535) when available...
-     *               c) is also used to where CSV data is populating the opencellid table.
-     *
-     * @return row id or -1 if error
-     *TODO This is not used anywmore as insertDbiMeasure does this
-     */
-/*    long insertOpenCell(
-                        String DBsource,//<--- What is this?
-                        String rat,
-                        int mcc,
-                        int mnc,
-                        int lac,
-                        int cid,
-                        int psc,
-                        double latitude,
-                        double longitude,
-                        int isGPSexact,
-                        int range,
-                        int avgSigStr,
-                        int samples,
-                        String time_first,
-                        String time_last,
-                        int rej_cause,
-                        boolean isNeedCheckExists
-    ) {
-
-        // Populate the named DB table columns with the values provided
-        ContentValues cellIDValues = new ContentValues();
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_RAT,           DBsource );
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_RAT,           rat );
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_MCC,           mcc);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_MNC,           mnc);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_LAC,           lac);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_CID,           cid);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_PSC,           psc);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_GPS_LAT,       latitude);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_GPS_LON,       longitude);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_IS_GPS_EXACT,  isGPSexact );
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_AVG_RANGE,     range );
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_AVG_SIGNAL,    avgSigStr);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_SAMPLES,       samples);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_TIME_FIRST,    time_first);
-        cellIDValues.put(DBTableColumnIds.DBE_IMPORT_TIME_LAST,     time_last);
-        cellIDValues.put("rej_cause", rej_cause );
-
-        // Ensure we don't save multiple cell-id entries into DB, when re-downloading OCID data.
-        if (isNeedCheckExists && openCellExists(cid)) {
-            // For performance it is probably better to skip than update? Also if OCID was recently corrupted?
-            Log.v(TAG,  mTAG + ": CID already found in DBe_import! Skipping: " + cid );
-            return 1;
-            //Log.v(TAG,  mTAG + ": CID already found in DBe_import! Updating: " + cellID );
-            //return mDb.update(OPENCELLID_TABLE, cellIDValues, "CellID=?", new String[]{Integer.toString(cellID)});
-        } else {
-            return mDb.insert(DBTableColumnIds.DBE_IMPORT_TABLE_NAME, null, cellIDValues);
-        }
-    }
-
-    /**
-     * Inserts API location details into the measurement Database (locationinfo)
-     *
-     * @return row id or -1 if error
-     *
-     * TODO: TABLE_DBI_MEASURE:DBi_measure
-     *
-     * TODO: This is not used anymore as insertBTS takes care of inserting to Dbi bts and Dbi measure
-     */
- /*   public long insertLocation( int lac,
-                                int cellID,
-                                int netType,
-                                double latitude,
-                                double longitude,
-                                int signalInfo,
-                                String cellInfo
-    ) {
-
-        if (latitude != 0.0 && longitude != 0.0) {
-
-            //Populate Content Values for Insert or Update
-            ContentValues locationValues = new ContentValues();
-           // locationValues.put("Lac",       lac);//TODO there is no lac in DBi_measure eva why are we inserting this?
-            locationValues.put(DBTableColumnIds.DBI_MEASURE_BTS_ID,    cellID);
-            //locationValues.put("Net",       netType);//TODO there is no rat in DBi_measure eva why are we inserting this?
-            locationValues.put(DBTableColumnIds.DBI_MEASURE_GPSD_LAT,       String.valueOf(latitude));
-            locationValues.put(DBTableColumnIds.DBI_MEASURE_GPSD_LON,       String.valueOf(longitude));
-            locationValues.put(DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,    signalInfo);
-            //locationValues.put("Connection", cellInfo); // has multiple items... //TODO where does this go in DBi_measure?
-
-            // TODO:    This is a strange check, why are we checking for Lat,Lon,Signal?
-            // URGENT:  This need to be thought about...
-            if (locationExists(cellID, latitude, longitude, signalInfo)) {//TODO is this really going to work? this will rarely be true over lat lon and sig continously chaning
-                return mDb.update(DBTableColumnIds.DBI_MEASURE_TABLE_NAME, locationValues, "bts_id=?",
-                        new String[]{Integer.toString(cellID)});
-            } else {
-                return mDb.insert(DBTableColumnIds.DBI_MEASURE_TABLE_NAME, null, locationValues);//TODO this is going to insert values of the same cellID alot is this right?
-            }
-        }
-
-        return 0;
-    }
-8/
     /**
      * Delete cell info - for use in tests
      *
@@ -583,7 +325,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     /**
      * Returns Location Information (DBi_meas) database contents
      *
-     * 
      */
     public Cursor getLocationData() {
         return returnDBiMeasure();
@@ -607,7 +348,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     /**
      * Returns Default MCC Locations (defaultlocation) database contents
-     * 
+     *
      */
     public Cursor getDefaultMccLocationData() {
         return returnDefaultLocation();
@@ -630,44 +371,20 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         String query = String.format("SELECT * FROM %s WHERE %s=%d AND %s=%d AND %s=%d AND %s=%d",
                 DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,                lat,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LON,                lng,
-                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,                signal);
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,
+                cellID,
+                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,
+                lat,
+                DBTableColumnIds.DBI_MEASURE_GPSD_LON,
+                lng,
+                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,
+                signal);
         Cursor cursor = mDb.rawQuery(query, null);
         boolean exists = cursor.getCount() > 0;
         cursor.close();
         return exists;
     }
 
-    /**
-     *  Description:    This checks if a cell with a given CID already exists
-     *                  in the "cellinfo" (DBi_bts) database.
-     */
-    boolean cellExists(int cellID) {
-        Cursor cursor = mDb.rawQuery("SELECT 1 FROM " + DBTableColumnIds.DBI_BTS_CID +
-                " WHERE CID = " + cellID, null);
-        boolean exists = cursor.getCount() > 0;
-        //Log.v(TAG, mTAG + ": Does CID: " + cellID + " exist in DBi_bts? " + exists);
-        cursor.close();
-        return exists;
-    }
-
-    /**
-     *  Description:    This checks if a cell with a given CID already exists
-     *                  in the "opencellid" (DBe_import) database.
-     */
-    public boolean openCellExists(int cellID) {
-        String qry = String.format("SELECT * FROM %s WHERE %s = %d",
-                DBTableColumnIds.DBE_IMPORT_TABLE_NAME,
-                DBTableColumnIds.DBE_IMPORT_CID,
-                cellID);
-        Cursor cursor = mDb.rawQuery(qry, null);
-        boolean exists = cursor.getCount() > 0;
-        //Log.v(TAG, mTAG + ": Does CID: " + cellID + " exist in DBe_import? " + exists);
-        cursor.close();
-        return exists;
-    }
 
     /**
      *  Description:    This take a "Cell" bundle (from API) as input and uses its CID to check
@@ -907,9 +624,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *   In addition the OCID data often contain unexplained negative values for one or both of:
      *    - "samples"
      *    - "range"
-     *
-     *   TODO:  Also we should probably change this function name from:
-     *          "updateOpenCellID" to "populateDBe_import"
      */
     public boolean populateDBeImport() {
         //This was not finding file on my samsung S5
@@ -1020,7 +734,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
                        insertDBeImport(
-                                "http://opencellid.org/",   //DBsource TODO <---is this right?
+                                "OCID",                     //DBsource
                                 radio,                      // RAT
                                 Integer.parseInt(mcc),      // MCC
                                 Integer.parseInt(mnc),      // MNC
@@ -1997,8 +1711,23 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         mDb.insert(DBTableColumnIds.DBE_CAPABILITIES_TABLE_NAME, null, dbeCapabilities);
     }
 
-    /*
-
+    /**
+     *  Description:    This method is used to insert and populate the downloaded or previously
+     *                  backed up OCID details into the DBe_import database table.
+     *                  It also prevents adding multiple entries of the same cell-id, when OCID
+     *                  downloads are repeated.
+     *
+     *  Issues:     [ ] None, but see GH issue #303 for a smarter OCID download handler.
+     *
+     *  Notes:       a) Move to:  CellTracker.java  see:
+     *                  https://github.com/SecUpwN/Android-IMSI-Catcher-Detector/issues/290#issuecomment-72303486
+     *               b) OCID CellID is of the "long form" (>65535) when available...
+     *               c) is also used to where CSV data is populating the opencellid table.
+     *
+     *
+     *
+     *
+     *
      */
     public boolean insertDBeImport(String db_src,
                                    String rat,
@@ -2040,18 +1769,16 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                 DBTableColumnIds.DBE_IMPORT_LAC,                lac,
                 DBTableColumnIds.DBE_IMPORT_CID,                cid);
 
-        //Check that the lac and cid not known if not insert
+        /*
+            Check that the lac and cid not known in the DBe_import
+            to avoid duplicate cells
+
+            Replaces openCellExists()
+         */
         Cursor cursor = mDb.rawQuery(query,null);
-        if( cursor.getCount() <= 0){
-            //TODO do I need to update or are we just inserting without any checks
-            mDb.insert(DBTableColumnIds.DBE_IMPORT_TABLE_NAME, null, dbeImport);
-            Log.d(TAG, "add new dbe_import");
-            cursor.close();
-            return true;
-        }else{
-            cursor.close();
-            return false;
-        }
+        boolean isCellinDB = cursor.getCount() >0;
+        cursor.close();
+        return isCellinDB;
     }
     /*
         Created this because we dont need to insert all the data in this table
@@ -2073,6 +1800,15 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, values);
 
             Log.i(TAG, "Dbi_bts inserted");
+        }else{
+            //if cell is in the DB update it to last time seen
+            ContentValues values = new ContentValues();
+            values.put(DBTableColumnIds.DBI_BTS_TIME_LAST, MiscUtils.getCurrentTimeStamp());
+            mDb.update( DBTableColumnIds.DBI_BTS_TABLE_NAME,
+                    values,
+                    "CID=?", new String[]{Integer.toString(device.mCell.getCID())} );
+            Log.i(TAG, "Dbi_bts Last Seen Updated");
+
         }
 
         if(!cellInDbiMeasure(device.mCell.getCID())){
@@ -2103,7 +1839,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TMSI,TMSI);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA,device.mCell.getTimingAdvance());
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_PD,PD);
-            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER,(int)device.mCell.getBearing());//TODO this isnt bearing
+            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER,(int)device.mCell.getBearing());//TODO this isnt bearing where do we get this value?
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_AVG_EC_NO,AvgEcNo);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_IS_SUBMITTED,1);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_IS_NEIGHBOUR,0);
@@ -2111,16 +1847,13 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
             Log.i(TAG, "Dbi_measure inserted");
 
-        }
+        }else{
+            //TODO: do we need to update DBi_measure with any data if the cell is already known to database
+         }
 
     }
     /**
-     * Inserts (API?) Cell Details into Database (cellinfo) TABLE_DBI_BTS:DBi_bts/measure
-     *
-     * @return row id or -1 if error
-     *
-     * TODO: This should become TABLE_DBI_BTS: DBi_bts | measure
-     * TODO Eva does this look right because there is alot of stuff missing like lat lon that insertCell had?
+     * Inserts (API?) Cell Details into Database (DBi_bts)
      */
     public void insertBTS( String rat,
                            int mcc,
@@ -2173,7 +1906,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     }
 
-
+    /**
+        TODO: add descritpion what this functions does
+    */
     public void insertDbiMeasure(int bts_id,
                                  String nc_list,
                                  String time,
@@ -2228,6 +1963,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     }
 
+    /**
+     TODO: add descritpion what this functions does
+     */
     public void insertDetectionFlags(int code,
                                      String name,
                                      String description,
@@ -2262,7 +2000,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      * Notes:           Table item order:
      *                  time,LAC,CID,PSC,gpsd_lat,gpsd_lon,gpsd_accu,DF_id,DF_desc
      *
-     * @return row id or -1 if error
      *
      * This table was previously known as insertDetection
      */
@@ -2292,6 +2029,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     }
 
+    /**
+     TODO: add descritpion what this functions does
+     */
     public void insertSectorType(String description){
 
         ContentValues sectorType = new ContentValues();
@@ -2300,7 +2040,10 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     }
 
-    public boolean insertDetectionStrings(String detection_string,
+    /**
+     TODO: add descritpion what this functions does
+     */
+    public void insertDetectionStrings(String detection_string,
                                           String sms_type){
 
         ContentValues detectonStrings = new ContentValues();
@@ -2315,16 +2058,19 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         //Check that string not in db then insert
         Cursor cursor = mDb.rawQuery(query,null);
+
         if( cursor.getCount() <= 0){
             mDb.insert(DBTableColumnIds.DETECTION_STRINGS_TABLE_NAME, null, detectonStrings);
             cursor.close();
-            return true;
         }else{
             cursor.close();
-            return false;
-        }
+         }
     }
 
+    /**
+         Description:
+                    inserts detected silent sms data into TABLE: SmsData
+     */
     public boolean insertSmsData(String time,
                                  String number,
                                  String smsc,
@@ -2371,7 +2117,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     }
 
     /*
-        Check is cid and lac is in Dbi_bts
+        Check cid and lac is in Dbi_bts
+        Replaces cellExists()
     */
     public boolean cellInDbiBts(int lac,int cellID){
         String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d",
@@ -2409,6 +2156,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     /*
         Check that the time_first timestamp in Dbi_bts is set
+        and if set that means we only need to update time_last
     */
     public boolean firstTimeSeenSet(int lac,int cellID){
         String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d",
@@ -2417,7 +2165,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                 DBTableColumnIds.DBI_BTS_CID,                cellID);
         Cursor cursor = mDb.rawQuery(query,null);
 
-        //check that the first_seen timestamp in Dbi_bts is set and if it is we only need to update time_last
         if (cursor.moveToNext()){
             String timestamp = cursor.getString(cursor.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_FIRST));
             if(timestamp != null)

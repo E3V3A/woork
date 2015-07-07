@@ -358,34 +358,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     //      Various DB operations
     // ====================================================================
 
-
-    /**
-     *  Description:    This checks if a cell with a given (CID,Lat,Lon,Signal) already exists
-     *                  in the "locationinfo" (DBi_measure) database.
-     *
-     *  Used:           insertLocation()
-     *
-     *  Notes:          a) seem excessive to select on lat,lon and signal...
-     */
-    boolean locationExists(int cellID, double lat, double lng, int signal) {
-
-        String query = String.format("SELECT * FROM %s WHERE %s=%d AND %s=%d AND %s=%d AND %s=%d",
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,
-                cellID,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LAT,
-                lat,
-                DBTableColumnIds.DBI_MEASURE_GPSD_LON,
-                lng,
-                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,
-                signal);
-        Cursor cursor = mDb.rawQuery(query, null);
-        boolean exists = cursor.getCount() > 0;
-        cursor.close();
-        return exists;
-    }
-
-
     /**
      *  Description:    This take a "Cell" bundle (from API) as input and uses its CID to check
      *                  in the DBi_measure (?) if there is already an associated LAC. It then
@@ -451,7 +423,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     /**
      * Updates Cell (cellinfo) records to indicate OpenCellID contribution has been made
-     * TODO: This should be done on TABLE_DBI_MEASURE::DBi_measure:isSubmitted
+     * TODO: This should be done on TABLE_DBI_MEASURE::DBi_measure:isSubmitted << vvv DONE vvv
      *
      */
     public void ocidProcessed() {
@@ -1811,7 +1783,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         }
 
-        if(!cellInDbiMeasure(device.mCell.getCID())){
+        //Checking to see is cellID already in DBi_measure--|
+        if(!cellInDbiMeasure(device.mCell.getCID())){//<----|
             ContentValues dbiMeasure = new ContentValues();
 
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BTS_ID,device.mCell.getCID());
@@ -1932,7 +1905,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                  int isSubmitted,
                                  int isNeighbour){
 
-        //Check bts_id is not already stored int Dbi_measure
+        //Check bts_id is not already stored int Dbi_measure. Only adds new cell if false
         if(cellInDbiMeasure(bts_id)){
             ContentValues dbiMeasure = new ContentValues();
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BTS_ID,bts_id);

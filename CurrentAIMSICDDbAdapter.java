@@ -1702,7 +1702,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      *
      *
      */
-    public boolean insertDBeImport(String db_src,
+    public void insertDBeImport(String db_src,
                                    String rat,
                                    int mcc,
                                    int mnc,
@@ -1749,9 +1749,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             Replaces openCellExists()
          */
         Cursor cursor = mDb.rawQuery(query,null);
-        boolean isCellinDB = cursor.getCount() >0;
+        if(cursor.getCount() <= 0){
+            // <= 0 means cell is not in database yet
+            mDb.insert(DBTableColumnIds.DBE_IMPORT_TABLE_NAME,null,dbeImport);
+        }
         cursor.close();
-        return isCellinDB;
+
     }
     /*
         Created this because we dont need to insert all the data in this table
@@ -1994,19 +1997,58 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         //Query to check that the event was already logged
         //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id BETWEEN 1 AND 4
-        String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d AND %s BETWEEN 1 AND 4",
+        //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 1" Changing lac
+        //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 2" cell not in OCID
+        //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 3" Detected SMS
+        //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 4" dont know yet?
+
+        /*
+            We need to check if cell not in OCID are not continously logged
+            to the database as it currently stands if the same cell shows up it will again be
+            dumped to the event log and will fill up pretty quickly
+
+         */
+        String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d AND %s = %d",
                 DBTableColumnIds.EVENTLOG_TABLE_NAME,       //EventLog
                 DBTableColumnIds.EVENTLOG_CID,  cid,        //CID
                 DBTableColumnIds.EVENTLOG_LAC,  lac,        //LAC
                 DBTableColumnIds.EVENTLOG_DF_ID,  DF_id);   //DF_id
 
-        //Check that the lac and cid not known if not insert
+
+
+        //Check that the lac/cid/DF_id not known if not insert
         Cursor cursor = mDb.rawQuery(query,null);
 
+        boolean EVENT_AREADLY_LOGGED = cursor.getCount() <= 0;// if <= 0 Event is not logged boolean will be true
+        boolean insertData = true;//deafualt
+        cursor.close();
 
-        if( cursor.getCount() <= 0){
-            cursor.close();
-            //Event not logged so sending to database
+
+        switch (DF_id){
+            case 1:
+                //Is lac and cid already logged for  CHANGIND LAC
+                if(EVENT_AREADLY_LOGGED) {
+                    insertData = false;
+                }
+                break;
+            case 2:
+                //Is lac and cid already logged for Cell not in OCID
+                if(EVENT_AREADLY_LOGGED) {
+                    insertData = false;
+                }
+                break;
+            case 3:
+                //Store detected is
+                //insertData = true; //already set above
+                break;
+            case 4:
+                //future code
+                //insertData = true; //already set above
+                break;
+        }
+
+        if(insertData){
+
             ContentValues eventLog = new ContentValues();
             eventLog.put(DBTableColumnIds.EVENTLOG_TIME,time);
             eventLog.put(DBTableColumnIds.EVENTLOG_LAC,lac);

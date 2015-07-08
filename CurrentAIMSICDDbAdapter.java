@@ -834,17 +834,18 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                     break;
                                 case DBTableColumnIds.DBI_BTS_TABLE_NAME:
                                     insertBTS(
-                                            records.get(i)[1].toString(),    // RAT
-                                            Integer.parseInt(records.get(i)[2]),    // MCC
-                                            Integer.parseInt(records.get(i)[3]),    // MNC
-                                            Integer.parseInt(records.get(i)[4]),    // LAC
-                                            Integer.parseInt(records.get(i)[5]),    // CID
-                                            Integer.parseInt(records.get(i)[6]),    // PSC
-                                            Integer.parseInt(records.get(i)[7]),    // T3212
-                                            Integer.parseInt(records.get(i)[8]),    // A5x
-                                            Integer.parseInt(records.get(i)[9]),    // ST_id
-                                            records.get(i)[10].toString(),          // First Time
-                                            records.get(i)[11].toString()           // last Time
+                                            Integer.parseInt(records.get(i)[1]),    // MCC
+                                            Integer.parseInt(records.get(i)[2]),    // MNC
+                                            Integer.parseInt(records.get(i)[3]),    // LAC
+                                            Integer.parseInt(records.get(i)[4]),    // CID
+                                            Integer.parseInt(records.get(i)[5]),    // PSC
+                                            Integer.parseInt(records.get(i)[6]),    // T3212
+                                            Integer.parseInt(records.get(i)[7]),    // A5x
+                                            Integer.parseInt(records.get(i)[8]),    // ST_id
+                                            records.get(i)[9].toString(),           // First Time
+                                            records.get(i)[10].toString(),          // last Time
+                                            Double.parseDouble(records.get(i)[11]), // lat
+                                            Double.parseDouble(records.get(i)[12])  // lon
                                     );
 
                                     break;
@@ -856,15 +857,15 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                             records.get(i)[3].toString(),             // time
                                             records.get(i)[4].toString(),             // gpsd_lat
                                             records.get(i)[5].toString(),             // gpsd_lon
-                                            Integer.parseInt(records.get(i)[6]),      // gpsd_accuracy
+                                            Integer.parseInt(records.get(i)[6]),      // gpsd_accu
                                             records.get(i)[7].toString(),             // gpse_lat
                                             records.get(i)[8].toString(),             // gpse_lon
-                                            records.get(i)[9].toString(),             // speed
-                                            records.get(i)[10].toString(),            // bb_power
-                                            records.get(i)[11].toString(),            // bb_rf_temp
-                                            records.get(i)[12].toString(),            // tx_power
-                                            records.get(i)[13].toString(),            // rx_signal
-                                            records.get(i)[14].toString(),            // rx_stype
+                                            records.get(i)[9].toString(),            // bb_power
+                                            records.get(i)[10].toString(),            // bb_rf_temp
+                                            records.get(i)[11].toString(),            // tx_power
+                                            records.get(i)[12].toString(),            // rx_signal
+                                            records.get(i)[13].toString(),            // rx_stype
+                                            records.get(i)[14].toString(),             // rat
                                             records.get(i)[15].toString(),            // BCCH
                                             records.get(i)[16].toString(),            // TMSI
                                             Integer.parseInt(records.get(i)[17]),     // TA
@@ -1761,7 +1762,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         //If lac and cellID not in DB store it
         if(!cellInDbiBts(device.mCell.getLAC(),device.mCell.getCID())) {
             ContentValues values = new ContentValues();
-            values.put(DBTableColumnIds.DBI_BTS_RAT, String.valueOf(device.mCell.getNetType()));
             values.put(DBTableColumnIds.DBI_BTS_MCC, device.mCell.getMCC());
             values.put(DBTableColumnIds.DBI_BTS_MNC, device.mCell.getMNC());
             values.put(DBTableColumnIds.DBI_BTS_LAC, device.mCell.getLAC());
@@ -1769,6 +1769,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             values.put(DBTableColumnIds.DBI_BTS_PSC, device.mCell.getPSC());
             values.put(DBTableColumnIds.DBI_BTS_TIME_FIRST, MiscUtils.getCurrentTimeStamp());
             values.put(DBTableColumnIds.DBI_BTS_TIME_LAST, MiscUtils.getCurrentTimeStamp());
+            values.put(DBTableColumnIds.DBI_BTS_LAT, device.mCell.getLat());
+            values.put(DBTableColumnIds.DBI_BTS_LON, device.mCell.getLon());
             mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, values);
 
             Log.i(TAG, "Dbi_bts inserted");
@@ -1802,12 +1804,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY, device.mCell.getAccuracy());
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSE_LAT,gpse_lat);
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSE_LON,gpse_lon);
-            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_SPEED, String.valueOf(device.mCell.getSpeed()));
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BB_POWER,String.valueOf(device.mCell.getDBM()));
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BB_RF_TEMP,bb_rf_temp);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TX_POWER,String.valueOf(device.mCell.getRssi()));
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,rx_signal);
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RX_STYPE,rx_stype);
+            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RAT, String.valueOf(device.mCell.getNetType()));
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BCCH,BCCH);
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TMSI,TMSI);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA,device.mCell.getTimingAdvance());
@@ -1828,7 +1830,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     /**
      * Inserts (API?) Cell Details into Database (DBi_bts)
      */
-    public void insertBTS( String rat,
+    public void insertBTS(
                            int mcc,
                            int mnc,
                            int lac,
@@ -1838,13 +1840,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                            int a5x,
                            int st_id,
                            String time_first,
-                           String time_last
+                           String time_last,
+                           double lat,
+                           double lon
     ) {
         //TODO this was the old if statement if (cid != -1 && (latitude != 0.0 && longitude != 0.0)) do we need to add other checks?
         if (cid != -1) {
             //Populate Content Values for Insert or Update
             ContentValues btsValues = new ContentValues();
-            btsValues.put(DBTableColumnIds.DBI_BTS_RAT,        rat);
             btsValues.put(DBTableColumnIds.DBI_BTS_MCC,        mcc);
             btsValues.put(DBTableColumnIds.DBI_BTS_MNC,        mnc);
             btsValues.put(DBTableColumnIds.DBI_BTS_LAC,        lac);
@@ -1855,6 +1858,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             btsValues.put(DBTableColumnIds.DBI_BTS_ST_ID,    st_id);
             btsValues.put(DBTableColumnIds.DBI_BTS_TIME_FIRST, time_first);
             btsValues.put(DBTableColumnIds.DBI_BTS_TIME_LAST,  time_last);
+            btsValues.put(DBTableColumnIds.DBI_BTS_LAT, lat);
+            btsValues.put(DBTableColumnIds.DBI_BTS_LON,  lon);
 
 
             String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d",
@@ -1890,12 +1895,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                  int gpsd_accuracy,
                                  String gpse_lat,
                                  String gpse_lon,
-                                 String speed,
                                  String bb_power,
                                  String bb_rf_temp,
                                  String tx_power,
                                  String rx_signal,
                                  String rx_stype,
+                                 String rat,
                                  String BCCH,
                                  String TMSI,
                                  int TA,
@@ -1916,12 +1921,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY,gpsd_accuracy);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSE_LAT,gpse_lat);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSE_LON,gpse_lon);
-            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_SPEED,speed);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BB_POWER,bb_power);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BB_RF_TEMP,bb_rf_temp);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TX_POWER,tx_power);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,rx_signal);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RX_STYPE,rx_stype);
+            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RAT,rat);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BCCH,BCCH);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TMSI,TMSI);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA,TA);
@@ -1949,6 +1954,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                      int istatus,
                                      int CM_id
     ){
+
         ContentValues detectionFlags = new ContentValues();
         detectionFlags.put(DBTableColumnIds.DETECTION_FLAGS_CODE,code);
         detectionFlags.put(DBTableColumnIds.DETECTION_FLAGS_NAME,name);
@@ -1986,19 +1992,39 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                int DF_id,
                                String DF_description){
 
-        ContentValues eventLog = new ContentValues();
-        eventLog.put(DBTableColumnIds.EVENTLOG_TIME,time);
-        eventLog.put(DBTableColumnIds.EVENTLOG_LAC,lac);
-        eventLog.put(DBTableColumnIds.EVENTLOG_CID,cid);
-        eventLog.put(DBTableColumnIds.EVENTLOG_PSC,psc);
-        eventLog.put(DBTableColumnIds.EVENTLOG_LAT,gpsd_lat);
-        eventLog.put(DBTableColumnIds.EVENTLOG_LON,gpsd_lon);
-        eventLog.put(DBTableColumnIds.EVENTLOG_ACCU,gpsd_accu);
-        eventLog.put(DBTableColumnIds.EVENTLOG_DF_ID,DF_id);
-        eventLog.put(DBTableColumnIds.EVENTLOG_DF_DESC,DF_description);
+        //Query to check that the event was already logged
+        //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id BETWEEN 1 AND 4
+        String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d AND %s BETWEEN 1 AND 4",
+                DBTableColumnIds.EVENTLOG_TABLE_NAME,       //EventLog
+                DBTableColumnIds.EVENTLOG_CID,  cid,        //CID
+                DBTableColumnIds.EVENTLOG_LAC,  lac,        //LAC
+                DBTableColumnIds.EVENTLOG_DF_ID,  DF_id);   //DF_id
 
-        mDb.insert(DBTableColumnIds.EVENTLOG_TABLE_NAME, null, eventLog);
-        Log.v(TAG, mTAG + ": Insert Detection into EventLog Table: " + cid);
+        //Check that the lac and cid not known if not insert
+        Cursor cursor = mDb.rawQuery(query,null);
+
+
+        if( cursor.getCount() <= 0){
+            cursor.close();
+            //Event not logged so sending to database
+            ContentValues eventLog = new ContentValues();
+            eventLog.put(DBTableColumnIds.EVENTLOG_TIME,time);
+            eventLog.put(DBTableColumnIds.EVENTLOG_LAC,lac);
+            eventLog.put(DBTableColumnIds.EVENTLOG_CID,cid);
+            eventLog.put(DBTableColumnIds.EVENTLOG_PSC,psc);
+            eventLog.put(DBTableColumnIds.EVENTLOG_LAT,gpsd_lat);
+            eventLog.put(DBTableColumnIds.EVENTLOG_LON,gpsd_lon);
+            eventLog.put(DBTableColumnIds.EVENTLOG_ACCU,gpsd_accu);
+            eventLog.put(DBTableColumnIds.EVENTLOG_DF_ID,DF_id);
+            eventLog.put(DBTableColumnIds.EVENTLOG_DF_DESC,DF_description);
+
+            mDb.insert(DBTableColumnIds.EVENTLOG_TABLE_NAME, null, eventLog);
+            Log.v(TAG, mTAG + ": Insert Detection into EventLog Table: " + cid);
+
+        }else{
+            //TODO do we need to do anything if event already logged?
+        }
+        cursor.close();
 
     }
 

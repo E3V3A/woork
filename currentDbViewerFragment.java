@@ -196,20 +196,20 @@ public class DbViewerFragment extends Fragment {
         if (tableData != null && tableData.getCount() > 0) {
             switch (mTableSelected) {
                 case UNIQUE_BTS_DATA: {
-                    //TODO this is a pain because in Dbi_bts there is no lat lon rss so I have to get data from Dbi_measure also.
-                    BaseInflaterAdapter<UniqueBtsItemData> adapter
+                        BaseInflaterAdapter<UniqueBtsItemData> adapter
                             = new BaseInflaterAdapter<>(new UniqueBtsCardInflater());
                     int count = tableData.getCount();
                     while (tableData.moveToNext()) {
                         UniqueBtsItemData data = new UniqueBtsItemData(
-                                "RAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_RAT)),
                                 "MCC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_MCC))),
                                 "MNC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_MNC))),
                                 "LAC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_LAC))),
                                 "CID: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_CID))),
                                 "PSC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_PSC))),
                                 "Time First: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_FIRST)),
-                                "Time Last: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_LAST)));
+                                "Time Last: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_LAST)),
+                                "LAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_LAT)),
+                                "LON: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_BTS_LON)));
                                // "" + (tableData.getPosition() + 1) + " / " + count);
                         adapter.addItem(data,false);
                     }
@@ -221,18 +221,18 @@ public class DbViewerFragment extends Fragment {
                 }
 
                 case BTS_MEASUREMENTS: {
-
                     BaseInflaterAdapter<CardItemData> adapter
                             = new BaseInflaterAdapter<>(new CellCardInflater());
                     int count = tableData.getCount();
                     while (tableData.moveToNext()) {
+
                         CardItemData data = new CardItemData(
                                 "CID: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BTS_ID))),
                                 "TIME: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_TIME)),
                                 "GPSD LAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_LAT)),
                                 "GPSD LON: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_LON)),
                                 "GPSD ACC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY))),
-                                "SPEED: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_SPEED)),
+                                "RAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_RAT)),//THIS is new and was added
                                 "Avg Sig Str: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BB_POWER)),
                                 "" + (tableData.getPosition() + 1) + " / " + count);
                         adapter.addItem(data, false);
@@ -241,7 +241,6 @@ public class DbViewerFragment extends Fragment {
                         tableData.close();
                     }
                     return adapter;
-
                 }
 
                 case IMPORTED_OCID_DATA: {

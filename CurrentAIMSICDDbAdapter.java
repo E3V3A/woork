@@ -8,18 +8,13 @@ import com.SecUpwN.AIMSICD.utils.Cell;
 import com.SecUpwN.AIMSICD.utils.CMDProcessor;
 import com.SecUpwN.AIMSICD.utils.Device;
 import com.SecUpwN.AIMSICD.utils.MiscUtils;
-import com.SecUpwN.AIMSICD.utils.RequestTask;
-
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.res.AssetManager;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.os.Environment;
 import android.util.Log;
 import android.util.SparseArray;
 import java.io.File;
@@ -35,6 +30,42 @@ import java.util.List;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
+/*
+    TODO: @EVA I'm Trying to add a changelog here on what I can think og is working
+
+        Default Locations now preloaded in DB
+        BackupDB() is now working with all new tables
+        RestoreDB() is now working with all new tables
+        Download OCID is working with new DbeImport Table
+        EventLog has been updated
+
+        insertBTS/insertBtsMeasure replaces insertCell/insertLocation
+        insertDBeImport replaces insertOpenCell
+        insertEventLog replaces insertDetection
+
+
+        returnEventLogData() replaces getEventLogData()
+        returnSmsData( replaces getSilentSmsData()
+        returnDBiBts() replaces getCellData()
+        returnDBiMeausre() replaces getLocationData()
+        returnDBeImport() replaces getOpenCellIDData()
+
+        "updateOpenCellID" renameed to "populateDBe_import"
+
+        removed populateDefaultMCC() as now these are preloaded
+
+        restoreDB()/backupDB() now restores/backup with new tables
+
+        removed: public class DbHelper extends SQLiteOpenHelper as we are now going with pre populated DB
+
+        Alot of code refactored to suit new DB changes
+
+        TODO: @Eva you need to remove/edit comments that might confuse people if the issue was fixed
+
+        TODO: What needs to be updated
+
+
+ */
 
 /**
  * Brief:   Handles the AMISICD DataBase tables (creation, population, updates,
@@ -98,7 +129,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     public static String FOLDER;
-    public static final int DATABASE_VERSION = 9; // Is this "pragma user_version;" ?
+    public static final int DATABASE_VERSION = 1; // Is this "pragma user_version;" ?
 
     // TODO: This should be implemented as a SharedPreference...
     private final Boolean MONO_DB_DUMP = true; // Also back-up DB with one monolithic dump file?
@@ -116,7 +147,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
     /**
-     * Description:
+     * Description:TODO @E:V:A comments need updating after new db changes as alot of these fixed.
      *              These tables are the ones that can be individually backed-up or restored in
      *              the backupDB() and restoreDB(). That's why the pre-loaded tables are NOT
      *              backed up, nor restored. They are:
@@ -237,7 +268,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     public void close() {
         mDb.close();
-        Log.i(TAG, "Closing db from AIMSICDDbAdapter.java");
+
     }
 
     @Override
@@ -944,7 +975,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             Log.i(TAG, mTAG + ": restoreDB() Finished ");
             return true;
         } catch (Exception e) {
-            Log.e(TAG, mTAG + ": restoreDB() " + e);
+            Log.e(TAG, mTAG + ": restoreDB() Error\n" + e);
             return false;
         } finally {
             AIMSICD.mProgressBar.setProgress(0);
@@ -1467,7 +1498,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     /*
         Returned Columns:
         "_id"        	INTEGER PRIMARY KEY AUTOINCREMENT,
-        "RAT"       	TEXT NOT NULL,
         "MCC"       	INTEGER NOT NULL,
         "MNC"       	INTEGER NOT NULL,
         "LAC"       	INTEGER NOT NULL,
@@ -1477,7 +1507,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         "A5x"       	INTEGER,
         "ST_id"     	INTEGER,
         "time_first"	TEXT,
-        "time_last" 	TEXT
+        "time_last" 	TEXT,
+	    "LAT"	        REAL NOT NULL,
+	    "LON"	        REAL NOT NULL
 */
     public Cursor returnDBiBts(){
         return mDb.rawQuery("SELECT * FROM "+ DBTableColumnIds.DBI_BTS_TABLE_NAME,null);
@@ -1494,12 +1526,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         "gpsd_accuracy"	INTEGER,
         "gpse_lat"     	TEXT,
         "gpse_lon"     	TEXT,
-        "speed"        	TEXT,
         "bb_power"     	TEXT,
         "bb_rf_temp"   	TEXT,
         "tx_power"     	TEXT,
         "rx_signal"    	TEXT,
         "rx_stype"     	TEXT,
+        "RAT"     	TEXT,
         "BCCH"         	TEXT,
         "TMSI"         	TEXT,
         "TA"           	INTEGER,
@@ -1685,6 +1717,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     }
 
     /**
+     * //TODO: @EVA update comments as not I dont think there is an issue with this
      *  Description:    This method is used to insert and populate the downloaded or previously
      *                  backed up OCID details into the DBe_import database table.
      *                  It also prevents adding multiple entries of the same cell-id, when OCID
@@ -1776,24 +1809,35 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             values.put(DBTableColumnIds.DBI_BTS_LON, device.mCell.getLon());
             mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, values);
 
-            Log.i(TAG, "Dbi_bts inserted");
+            Log.i(mTAG, "Dbi_bts inserted");
         }else{
-            //if cell is in the DB update it to last time seen
+            /*
+                if cell is in the DB update it to last time seen
+                and update gps coors in not 0.0
+
+             */
             ContentValues values = new ContentValues();
             values.put(DBTableColumnIds.DBI_BTS_TIME_LAST, MiscUtils.getCurrentTimeStamp());
+            if(device.mCell.getLat() != 0.0 && device.mCell.getLon() != 0.0){
+                values.put(DBTableColumnIds.DBI_BTS_LAT, device.mCell.getLat());
+                values.put(DBTableColumnIds.DBI_BTS_LON, device.mCell.getLon());
+            }
+
+
             mDb.update( DBTableColumnIds.DBI_BTS_TABLE_NAME,
                     values,
                     "CID=?", new String[]{Integer.toString(device.mCell.getCID())} );
-            Log.i(TAG, "Dbi_bts Last Seen Updated");
+            Log.i(mTAG, "Dbi_bts Updated Cid="+device.mCell.getCID()+" Lac="+device.mCell.getLAC());
 
         }
 
-        //Checking to see is cellID already in DBi_measure--|
+        //Checking to see is cellID(bts_id) already in DBi_measure--|
         if(!cellInDbiMeasure(device.mCell.getCID())){//<----|
             ContentValues dbiMeasure = new ContentValues();
 
+
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BTS_ID,device.mCell.getCID());
-            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_NC_LIST,nc_list);
+            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_NC_LIST,"no_data");//TODO where are we getting this?
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TIME, MiscUtils.getCurrentTimeStamp());
 
             String slat = String.valueOf(device.mCell.getLat());
@@ -1815,7 +1859,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RAT, String.valueOf(device.mCell.getNetType()));
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BCCH,BCCH);
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TMSI,TMSI);
-            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA,device.mCell.getTimingAdvance());
+            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA,device.mCell.getTimingAdvance());//TODO does this actually get timing advance?
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_PD,PD);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER,(int)device.mCell.getBearing());//TODO this isnt bearing where do we get this value?
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_AVG_EC_NO,AvgEcNo);
@@ -1823,15 +1867,55 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_IS_NEIGHBOUR,0);
             mDb.insert(DBTableColumnIds.DBI_MEASURE_TABLE_NAME, null, dbiMeasure);
 
-            Log.i(TAG, "Dbi_measure inserted");
+            Log.i(mTAG, "Dbi_measure inserted bts_id="+device.mCell.getCID());
 
         }else{
-            //TODO: do we need to update DBi_measure with any data if the cell is already known to database
+            //Updated Dbi_measure
+            ContentValues dbiMeasure = new ContentValues();
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_NC_LIST,nc_list);
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TIME, MiscUtils.getCurrentTimeStamp());
+
+            if(device.mCell.getLat() != 0.0 && device.mCell.getLon() != 0.0){
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSD_LAT, device.mCell.getLat());
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSD_LON, device.mCell.getLon());
+            }
+            if(device.mCell.getAccuracy() != 0.0 && device.mCell.getAccuracy() > 0) {
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY, device.mCell.getAccuracy());
+            }
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSE_LAT,gpse_lat);
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_GPSE_LON,gpse_lon);
+            if(device.mCell.getDBM() > 0) {
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BB_POWER, String.valueOf(device.mCell.getDBM()));
+            }
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BB_RF_TEMP,bb_rf_temp);
+            if(device.mCell.getRssi() >0) {
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TX_POWER, String.valueOf(device.mCell.getRssi()));
+            }
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,rx_signal);
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RX_STYPE,rx_stype);
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_RAT, String.valueOf(device.mCell.getNetType()));
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BCCH,BCCH);
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TMSI,TMSI);
+            if(device.mCell.getTimingAdvance() > 0) {
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA, device.mCell.getTimingAdvance());//TODO does this actually get timing advance?
+            }
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_PD,PD);
+            if(device.mCell.getBearing() > 0) {
+                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER, (int) device.mCell.getBearing());//TODO this isnt bearing where do we get this value?
+            }
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_AVG_EC_NO,AvgEcNo);
+
+            mDb.update(DBTableColumnIds.DBI_MEASURE_TABLE_NAME,dbiMeasure,"bts_id=?",new String[]{Integer.toString(device.mCell.getCID())});
+            Log.i(mTAG, "Dbi_measure updated bts_id="+device.mCell.getCID());
+
          }
 
     }
+
+
     /**
      * Inserts (API?) Cell Details into Database (DBi_bts)
+     * Used be restoreDB()
      */
     public void insertBTS(
                            int mcc,
@@ -1889,6 +1973,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     /**
         TODO: add descritpion what this functions does
+        Used be restoreDB()
     */
     public void insertDbiMeasure(int bts_id,
                                  String nc_list,
@@ -1995,7 +2080,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                int DF_id,
                                String DF_description){
 
-        //Query to check that the event was already logged
+        //Query examples for future devs
         //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id BETWEEN 1 AND 4
         //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 1" Changing lac
         //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 2" cell not in OCID
@@ -2003,7 +2088,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         //SELECT * FROM EventLog WHERE CID = 1234 AND LAC = 4321 AND DF_id = 4" dont know yet?
 
         /*
-            We need to check if cell not in OCID are not continously logged
+            We need to check if cell not in OCID  Event are not continuously logged
             to the database as it currently stands if the same cell shows up it will again be
             dumped to the event log and will fill up pretty quickly
 
@@ -2020,13 +2105,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         Cursor cursor = mDb.rawQuery(query,null);
 
         boolean EVENT_AREADLY_LOGGED = cursor.getCount() <= 0;// if <= 0 Event is not logged boolean will be true
-        boolean insertData = true;//deafualt
+        boolean insertData = true;//deafault
         cursor.close();
 
 
         switch (DF_id){
             case 1:
-                //Is lac and cid already logged for  CHANGIND LAC
+
+                /*Is lac and cid already logged for  CHANGIND LAC */
                 if(EVENT_AREADLY_LOGGED) {
                     insertData = false;
                 }
@@ -2038,11 +2124,17 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                 }
                 break;
             case 3:
-                //Store detected is
-                //insertData = true; //already set above
+                /*
+                    Store detected sms
+
+                    We dont really need to check this event
+                    because it will only be inserted if an
+                    sms is detected and we wont have duplicates
+                 */
+                //insertData = true;
                 break;
             case 4:
-                //future code
+                //future code TODO: where are the DF_id codes? Like 1 = Changing Lac?
                 //insertData = true; //already set above
                 break;
         }
@@ -2066,7 +2158,6 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         }else{
             //TODO do we need to do anything if event already logged?
         }
-        cursor.close();
 
     }
 
@@ -2084,17 +2175,17 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     /**
      TODO: add descritpion what this functions does
      */
-    public void insertDetectionStrings(String detection_string,
+    public void insertDetectionStrings(String det_str,
                                           String sms_type){
 
         ContentValues detectonStrings = new ContentValues();
-        detectonStrings.put(DBTableColumnIds.DETECTION_STRINGS_LOGCAT_STRING,detection_string);
+        detectonStrings.put(DBTableColumnIds.DETECTION_STRINGS_LOGCAT_STRING,det_str);
         detectonStrings.put(DBTableColumnIds.DETECTION_STRINGS_SMS_TYPE,sms_type);
 
 
         String query = String.format("SELECT * FROM %s WHERE %s = \"%s\" AND %s = \"%s\"",
                 DBTableColumnIds.DETECTION_STRINGS_TABLE_NAME,
-                DBTableColumnIds.DETECTION_STRINGS_LOGCAT_STRING,          detection_string,
+                DBTableColumnIds.DETECTION_STRINGS_LOGCAT_STRING,          det_str,
                 DBTableColumnIds.DETECTION_STRINGS_SMS_TYPE,                sms_type);
 
         //Check that string not in db then insert
@@ -2148,7 +2239,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         //Check that timestamp not in db then insert
         Cursor cursor = mDb.rawQuery(query,null);
         if( cursor.getCount() <= 0){
-            mDb.insert(DBTableColumnIds.DETECTION_STRINGS_TABLE_NAME, null, smsData);
+            mDb.insert(DBTableColumnIds.SMS_DATA_TABLE_NAME, null, smsData);
             cursor.close();
             return true;
         }else{
@@ -2161,6 +2252,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     /**
      *  Description:    This checks if a cell with a given CID already exists
      *                  in the (DBe_import) database.
+     *
+     *                  used in CellTracker()
      */
     public boolean openCellExists(int cellID) {
         String qry = String.format("SELECT * FROM %s WHERE %s = %d",
@@ -2185,9 +2278,11 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
         Cursor cursor = mDb.rawQuery(query,null);
         if(cursor.getCount() > 0)
-        {cursor.close();
+        {
+            cursor.close();
             return true;
-        }else{cursor.close();
+        }else{
+            cursor.close();
             return false;
         }
 
@@ -2211,26 +2306,4 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     }
 
-    /*
-        Check that the time_first timestamp in Dbi_bts is set
-        and if set that means we only need to update time_last
-    */
-    public boolean firstTimeSeenSet(int lac,int cellID){
-        String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d",
-                DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_LAC,                lac,
-                DBTableColumnIds.DBI_BTS_CID,                cellID);
-        Cursor cursor = mDb.rawQuery(query,null);
-
-        if (cursor.moveToNext()){
-            String timestamp = cursor.getString(cursor.getColumnIndex(DBTableColumnIds.DBI_BTS_TIME_FIRST));
-            if(timestamp != null)
-            {
-                cursor.close();
-                return true;
-            }
-        }
-        cursor.close();
-        return false;
-        }
 }

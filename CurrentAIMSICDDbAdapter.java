@@ -1640,7 +1640,23 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         def_location.put(DBTableColumnIds.DEFAULT_LOCATION_MCC, mcc);
         def_location.put(DBTableColumnIds.DEFAULT_LOCATION_LAT, lat);
         def_location.put(DBTableColumnIds.DEFAULT_LOCATION_LON, lon);
-        mDb.insert(DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME, null, def_location);
+
+        String query = String.format("SELECT * FROM %s WHERE %s = \"%s\" AND %s = %d ",
+                DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,
+                DBTableColumnIds.DEFAULT_LOCATION_COUNTRY,      country,
+                DBTableColumnIds.DEFAULT_LOCATION_MCC,             mcc);
+
+        /*
+            Check that the country and mcc not known in the DefaultLocation DB
+            to avoid duplicates
+         */
+        Cursor cursor = mDb.rawQuery(query,null);
+        if(cursor.getCount() <= 0){
+            // <= 0 means country is not in database yet
+            mDb.insert(DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME, null, def_location);
+        }
+        cursor.close();
+
     }
 
     public boolean insertApiKeys(String name,

@@ -31,7 +31,7 @@ import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
 /*
-    TODO: @EVA I'm Trying to add a changelog here on what I can think og is working
+    TODO: @EVA I'm Trying to add a changelog here on what I can think of is working
 
         Default Locations now preloaded in DB
         BackupDB() is now working with all new tables

@@ -356,7 +356,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         //TODO this needs to be updated what is this returning because there is no OCID_SUBMITTED or isSubmitted in cellinfo/DBi_bts
         return mDb.query( DBTableColumnIds.DBI_BTS_TABLE_NAME,//TODO this inst working need to fix to get more data
                 new String[]{"Mcc", "Mnc", "Lac", "CellID", "Lng", "Lat", "Signal", "Timestamp",
-                        "Accuracy", "Speed", "Direction", "NetworkType"}, "OCID_SUBMITTED <> 1",
+                        "Accuracy", "Speed", "Direction", "NetworkType"}, "OCID_SUBMITTED <> 1",//<-- where we getting these tables OCID_SUBMITTED DBi_bts?/DBi_measure?/DBe_import?
                 null, null, null, null
         );
     }

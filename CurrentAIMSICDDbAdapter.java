@@ -31,7 +31,7 @@ import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
 /*
-    TODO: @EVA I'm Trying to add a changelog here on what I can think of is working
+    TODO: @EVA I'm Trying to add a changelog here on what I can think og is working
 
         Default Locations now preloaded in DB
         BackupDB() is now working with all new tables
@@ -60,12 +60,12 @@ import au.com.bytecode.opencsv.CSVWriter;
 
         Alot of code refactored to suit new DB changes
 
-        TODO: @Eva you need to remove/edit comments that might confuse people if the issue was fixed
+        TODO: @Eva you need to remove/edit comments that might confuse people if the issue was fixed by this PR
 
         TODO: What needs to be updated
 
 
- */
+
 
 /**
  * Brief:   Handles the AMISICD DataBase tables (creation, population, updates,
@@ -194,6 +194,12 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
     /**
      * Creates a empty database on the system and rewrites it with your own database.
+     * @banjaxbanjo:
+     * This is a modified version to suit of needs of this guys great guide on how to
+     * build a pre compiled db for android. Cheers Juan-Manuel Fluxà
+     *
+     * http://www.reigndesign.com/blog/using-your-own-sqlite-database-in-android-applications/
+     *
      * */
     public boolean createDataBase(){
         if(!checkDataBase()){
@@ -222,7 +228,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         SQLiteDatabase checkDB = null;
 
         try{
-            Log.i(TAG,"Checking for db first install this will throw an error on install and is noraml");
+            //Log.i(TAG,"Checking for db first install this will throw an error on install and is noraml");
             checkDB = SQLiteDatabase.openDatabase(DB_LOCATION, null, SQLiteDatabase.OPEN_READONLY);
         }catch(SQLiteException e){
             Log.e(TAG,"database not created yet "+e.toString());
@@ -334,8 +340,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      * TODO in DBi_bts but they seem to be in Dbe_import.. is this right?
      */
     public Cursor getCellData() {
-        //return returnDBiBts();
-        return returnDBeImport();
+        return returnDBiBts();
     }
 
     /**
@@ -414,17 +419,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      */
     public boolean checkLAC(Cell cell) {
         String query = String.format("SELECT * FROM %s WHERE %s = %d",
-                DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_CID,  cell.getCID());
+                DBTableColumnIds.DBI_BTS_TABLE_NAME,            //DBi_bts
+                DBTableColumnIds.DBI_BTS_CID,  cell.getCID());  //CID
 
         Cursor bts_cursor = mDb.rawQuery(query,null);
 
         while (bts_cursor.moveToNext()) {
             // 1=LAC, 8=Accuracy, 11=Time
             if (cell.getLAC() != bts_cursor.getInt(bts_cursor.getColumnIndex(DBTableColumnIds.DBI_BTS_LAC))) {
-                //Log.i(TAG, "ALERT: Changing LAC on CID: " + cell.getCID()
-                //        + " Current LAC(DBi): " + cell.getLAC()
-                //        + " Database LAC(DBe): " + cursor.getInt(0));
                 Log.i(TAG, "ALERT: Changing LAC on CID: " + cell.getCID()
                         + " LAC(API): " + cell.getLAC()
                         + " LAC(DBi): " + bts_cursor.getInt(bts_cursor.getColumnIndex(DBTableColumnIds.DBI_BTS_LAC)));
@@ -435,8 +437,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                         cell.getPSC(),//This is giving weird values like 21478364... is this right?
                         String.valueOf(cell.getLat()),
                         String.valueOf(cell.getLon()),
-                        (int)cell.getAccuracy(),//TODO cell.getAccuracy() = double & EventLog Column = int? is GPS Api returning int or double for ACC?
-                        1,//should we create a add these to constants class like CHANGING_LAC = 1 etc...
+                        (int)cell.getAccuracy(),
+                        1,
                         "Changing LAC");
 
                 bts_cursor.close();
@@ -466,10 +468,10 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     public double[] getDefaultLocation(int mcc) {
         //Formatting queries like this so its more clear what is happening
         String query = String.format("SELECT %s,%s FROM %s WHERE %s = %d",
-                DBTableColumnIds.DEFAULT_LOCATION_LAT,
-                DBTableColumnIds.DEFAULT_LOCATION_LON,
-                DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,
-                DBTableColumnIds.DEFAULT_LOCATION_MCC,     mcc);
+                DBTableColumnIds.DEFAULT_LOCATION_LAT,              //lat
+                DBTableColumnIds.DEFAULT_LOCATION_LON,              //lon
+                DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,       //defaultlocation
+                DBTableColumnIds.DEFAULT_LOCATION_MCC,     mcc);    //MCC
 
         double[] loc = new double[2];
         Cursor cursor = mDb.rawQuery(query, null);
@@ -493,27 +495,25 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      */
     public void cleanseCellTable() {
         //Creating queries with string format because easier to understand
-        // This removes all but the last row in the "cellinfo" table
+        // This removes all but the last row in the "DBi_bts" table
         String query = String.format("DELETE FROM %s WHERE %s NOT IN (SELECT MAX(%s) FROM %s GROUP BY %s)",
-                DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_ID,
-                DBTableColumnIds.DBI_BTS_ID,
-                DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_CID
+                DBTableColumnIds.DBI_BTS_TABLE_NAME,    //DBi_bts
+                DBTableColumnIds.DBI_BTS_ID,            //_id
+                DBTableColumnIds.DBI_BTS_ID,            //_id
+                DBTableColumnIds.DBI_BTS_TABLE_NAME,    //DBi_bts
+                DBTableColumnIds.DBI_BTS_CID            //CID
         );
 
         mDb.execSQL(query);
 
         String query2 = String.format("DELETE FROM %s WHERE %s = %d OR %s = -1",
-                DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_CID,      Integer.MAX_VALUE,
-                DBTableColumnIds.DBI_BTS_CID
+                DBTableColumnIds.DBI_BTS_TABLE_NAME,    //DBi_bts
+                DBTableColumnIds.DBI_BTS_CID,           //CID
+                Integer.MAX_VALUE,
+                DBTableColumnIds.DBI_BTS_CID            //CID
         );
 
         mDb.execSQL(query2);
-        //mDb.execSQL("DELETE FROM " + DBTableColumnIds.DBI_BTS_TABLE_NAME + " WHERE " + DBTableColumnIds.DBI_BTS_ID + " NOT IN (SELECT MAX(" + DBTableColumnIds.DBI_BTS_ID + ") FROM " + DBTableColumnIds.DBI_BTS_TABLE_NAME + " GROUP BY CID)");
-        // This removes all cells with trouble CID numbers (MAX, -1)
-        //mDb.execSQL("DELETE FROM " + CELL_TABLE + " WHERE CellID = " + Integer.MAX_VALUE + " OR CellID = -1");
     }
 
     /**
@@ -1227,8 +1227,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     // =======================================================================================
     public void cleanseCellStrengthTables(long maxTime) {
         String query = String.format("DELETE FROM %s WHERE %s < %d",
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_TIME,maxTime );
+                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,        //DBi_measure
+                DBTableColumnIds.DBI_MEASURE_TIME,maxTime );    //time
         Log.d(TAG, mTAG + ": Cleaning " + DBTableColumnIds.DBI_MEASURE_TABLE_NAME + " WHERE time < " + maxTime);
         mDb.execSQL(query);
     }
@@ -1245,35 +1245,35 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     public int countSignalMeasurements(int cellID) {
 
         String query = String.format("SELECT COUNT(%s) FROM %s WHERE %s= %d",
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,cellID );
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,            //bts_id
+                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,        //DBi_measure
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,cellID );   //bts_id
         Cursor c = mDb.rawQuery(query,null);
         c.moveToFirst();
-        int lAnswer = c.getInt(0);//<--- TODO what is this returning? index 0 = _id
+        int lAnswer = c.getInt(0);
         c.close();
         return lAnswer;
     }
 
     public int getAverageSignalStrength(int cellID) {
         String query = String.format("SELECT AVG(%s) FROM %s WHERE %s= %d",
-                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,cellID );
+                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,         //rx_signal
+                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,        //DBi_measure
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,cellID );   //bts_id
         Cursor c = mDb.rawQuery(query,null);
         c.moveToFirst();
-        int lAnswer = c.getInt(0);//<--- TODO what is this returning? index 0 = _id
+        int lAnswer = c.getInt(0);
         c.close();
         return lAnswer;
     }
 
     public Cursor getSignalStrengthMeasurementData() {
         String query = String.format("SELECT %s, %s, %s FROM  %s ORDER BY %s DESC",
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,
-                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,
-                DBTableColumnIds.DBI_MEASURE_TIME,
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_TIME
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,        //bts_id
+                DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,     //rx_signal
+                DBTableColumnIds.DBI_MEASURE_TIME,          //time
+                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,    //DBi_measure
+                DBTableColumnIds.DBI_MEASURE_TIME           //time
                 );
         return mDb.rawQuery(query,null);
     }
@@ -1642,9 +1642,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         def_location.put(DBTableColumnIds.DEFAULT_LOCATION_LON, lon);
 
         String query = String.format("SELECT * FROM %s WHERE %s = \"%s\" AND %s = %d ",
-                DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,
-                DBTableColumnIds.DEFAULT_LOCATION_COUNTRY,      country,
-                DBTableColumnIds.DEFAULT_LOCATION_MCC,             mcc);
+                DBTableColumnIds.DEFAULT_LOCATION_TABLE_NAME,               //defaultlocation
+                DBTableColumnIds.DEFAULT_LOCATION_COUNTRY,      country,    //country
+                DBTableColumnIds.DEFAULT_LOCATION_MCC,             mcc);    //MCC
 
         /*
             Check that the country and mcc not known in the DefaultLocation DB
@@ -1673,8 +1673,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         ApiKeys.put(DBTableColumnIds.API_KEYS_TIME_EXP,time_exp);
 
         String query = String.format("SELECT * FROM %s WHERE %s = \"%s\"",
-                DBTableColumnIds.API_KEYS_TABLE_NAME,
-                DBTableColumnIds.API_KEYS_KEY,                key);
+                DBTableColumnIds.API_KEYS_TABLE_NAME,               //API_keys
+                DBTableColumnIds.API_KEYS_KEY,                key); //key
 
         Cursor cursor = mDb.rawQuery(query,null);
         if( cursor.getCount() <= 0){
@@ -1787,9 +1787,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         dbeImport.put(DBTableColumnIds.DBE_IMPORT_REJ_CAUSE,rej_cause);
 
         String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d ",
-                DBTableColumnIds.DBE_IMPORT_TABLE_NAME,
-                DBTableColumnIds.DBE_IMPORT_LAC,                lac,
-                DBTableColumnIds.DBE_IMPORT_CID,                cid);
+                DBTableColumnIds.DBE_IMPORT_TABLE_NAME,                 //DBe_import
+                DBTableColumnIds.DBE_IMPORT_LAC,                lac,    //LAC
+                DBTableColumnIds.DBE_IMPORT_CID,                cid);   //CID
 
         /*
             Check that the lac and cid not known in the DBe_import
@@ -1825,7 +1825,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             values.put(DBTableColumnIds.DBI_BTS_LON, device.mCell.getLon());
             mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, values);
 
-            Log.i(mTAG, "Dbi_bts inserted");
+            Log.i(mTAG, "DBi_bts inserted");
         }else{
             /*
                 if cell is in the DB update it to last time seen
@@ -1834,7 +1834,10 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
              */
             ContentValues values = new ContentValues();
             values.put(DBTableColumnIds.DBI_BTS_TIME_LAST, MiscUtils.getCurrentTimeStamp());
-            if(device.mCell.getLat() != 0.0 && device.mCell.getLon() != 0.0){
+
+            //Only update if gps coors are good
+            if(device.mCell.getLat() != 0.0 && device.mCell.getLat() != 0
+            && device.mCell.getLon() != 0.0 && device.mCell.getLon() != 0){
                 values.put(DBTableColumnIds.DBI_BTS_LAT, device.mCell.getLat());
                 values.put(DBTableColumnIds.DBI_BTS_LON, device.mCell.getLon());
             }
@@ -1843,7 +1846,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             mDb.update( DBTableColumnIds.DBI_BTS_TABLE_NAME,
                     values,
                     "CID=?", new String[]{Integer.toString(device.mCell.getCID())} );
-            Log.i(mTAG, "Dbi_bts Updated Cid="+device.mCell.getCID()+" Lac="+device.mCell.getLAC());
+            Log.i(mTAG, "DBi_bts Updated Cid="+device.mCell.getCID()+" Lac="+device.mCell.getLAC());
 
         }
 
@@ -1853,7 +1856,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BTS_ID,device.mCell.getCID());
-            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_NC_LIST,"no_data");//TODO where are we getting this?
+
+
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_NC_LIST,"no_data");//TODO where are we getting this?
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TIME, MiscUtils.getCurrentTimeStamp());
 
             String slat = String.valueOf(device.mCell.getLat());
@@ -1877,16 +1882,17 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TMSI,TMSI);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA,device.mCell.getTimingAdvance());//TODO does this actually get timing advance?
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_PD,PD);
-            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER,(int)device.mCell.getBearing());//TODO this isnt bearing where do we get this value?
+            dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER,0);//TODO setting 0 because we dont have data yet.
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_AVG_EC_NO,AvgEcNo);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_IS_SUBMITTED,1);
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_IS_NEIGHBOUR,0);
             mDb.insert(DBTableColumnIds.DBI_MEASURE_TABLE_NAME, null, dbiMeasure);
 
-            Log.i(mTAG, "Dbi_measure inserted bts_id="+device.mCell.getCID());
+            Log.i(mTAG, "DBi_measure inserted bts_id="+device.mCell.getCID());
 
         }else{
-            //Updated Dbi_measure
+            //Updated DBi_measure
+            //TODO commented out items are because we don't have this data yet or it doesn't need updating
             ContentValues dbiMeasure = new ContentValues();
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_NC_LIST,nc_list);
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TIME, MiscUtils.getCurrentTimeStamp());
@@ -1916,13 +1922,11 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                 dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_TA, device.mCell.getTimingAdvance());//TODO does this actually get timing advance?
             }
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_PD,PD);
-            if(device.mCell.getBearing() > 0) {
-                dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER, (int) device.mCell.getBearing());//TODO this isnt bearing where do we get this value?
-            }
+            //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BER,0);//TODO putting 0 here as I dont know where this data is comming from
             //dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_AVG_EC_NO,AvgEcNo);
 
             mDb.update(DBTableColumnIds.DBI_MEASURE_TABLE_NAME,dbiMeasure,"bts_id=?",new String[]{Integer.toString(device.mCell.getCID())});
-            Log.i(mTAG, "Dbi_measure updated bts_id="+device.mCell.getCID());
+            Log.i(mTAG, "DBi_measure updated bts_id="+device.mCell.getCID());
 
          }
 
@@ -1966,23 +1970,22 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
             String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d",
-                    DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                    DBTableColumnIds.DBI_BTS_LAC,                    lac,
-                    DBTableColumnIds.DBI_BTS_CID,                    cid);
+                    DBTableColumnIds.DBI_BTS_TABLE_NAME,                    //DBi_bts
+                    DBTableColumnIds.DBI_BTS_LAC,                    lac,   //LAC
+                    DBTableColumnIds.DBI_BTS_CID,                    cid);  //CID
 
             //Check that the lac and cid not known if not insert
             Cursor cursor = mDb.rawQuery(query,null);
             if( cursor.getCount() <= 0){
-                cursor.close();
+
                 mDb.insert(DBTableColumnIds.DBI_BTS_TABLE_NAME, null, btsValues);
 
             }else{
                 //TODO EVA do I need to update an already known cell?
-                cursor.close();
-                mDb.update( DBTableColumnIds.DBI_BTS_TABLE_NAME, btsValues, "CID=?", new String[]{Integer.toString(cid)} );
+                  mDb.update( DBTableColumnIds.DBI_BTS_TABLE_NAME, btsValues, "CID=?", new String[]{Integer.toString(cid)} );
 
             }
-
+            cursor.close();
         }
 
     }
@@ -2014,7 +2017,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
                                  int isSubmitted,
                                  int isNeighbour){
 
-        //Check bts_id is not already stored int Dbi_measure. Only adds new cell if false
+        //Check bts_id is not already stored int DBi_measure. Only adds new cell if false
         if(cellInDbiMeasure(bts_id)){
             ContentValues dbiMeasure = new ContentValues();
             dbiMeasure.put(DBTableColumnIds.DBI_MEASURE_BTS_ID,bts_id);
@@ -2120,7 +2123,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
         //Check that the lac/cid/DF_id not known if not insert
         Cursor cursor = mDb.rawQuery(query,null);
 
-        boolean EVENT_AREADLY_LOGGED = cursor.getCount() <= 0;// if <= 0 Event is not logged boolean will be true
+        boolean EVENT_ALREADY_LOGGED = cursor.getCount() > 0;// if > 0 Event is logged boolean will be true
+        Log.d(mTAG, "EVENT_AREADLY_LOGGED="+EVENT_ALREADY_LOGGED );
         boolean insertData = true;//deafault
         cursor.close();
 
@@ -2129,13 +2133,13 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
             case 1:
 
                 /*Is lac and cid already logged for  CHANGIND LAC */
-                if(EVENT_AREADLY_LOGGED) {
+                if(EVENT_ALREADY_LOGGED) {
                     insertData = false;
                 }
                 break;
             case 2:
                 //Is lac and cid already logged for Cell not in OCID
-                if(EVENT_AREADLY_LOGGED) {
+                if(EVENT_ALREADY_LOGGED) {
                     insertData = false;
                 }
                 break;
@@ -2178,7 +2182,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     }
 
     /**
-     TODO: add descritpion what this functions does
+     TODO: add description what this functions does
      */
     public void insertSectorType(String description){
 
@@ -2200,9 +2204,9 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
         String query = String.format("SELECT * FROM %s WHERE %s = \"%s\" AND %s = \"%s\"",
-                DBTableColumnIds.DETECTION_STRINGS_TABLE_NAME,
-                DBTableColumnIds.DETECTION_STRINGS_LOGCAT_STRING,          det_str,
-                DBTableColumnIds.DETECTION_STRINGS_SMS_TYPE,                sms_type);
+                DBTableColumnIds.DETECTION_STRINGS_TABLE_NAME,                          //DetectionStrings
+                DBTableColumnIds.DETECTION_STRINGS_LOGCAT_STRING,          det_str,     //det_str
+                DBTableColumnIds.DETECTION_STRINGS_SMS_TYPE,                sms_type);  //sms_type
 
         //Check that string not in db then insert
         Cursor cursor = mDb.rawQuery(query,null);
@@ -2249,8 +2253,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
 
 
         String query = String.format("SELECT * FROM %s WHERE %s = \"%s\"",
-                DBTableColumnIds.SMS_DATA_TABLE_NAME,
-                DBTableColumnIds.SMS_DATA_TIMESTAMP,                time);
+                DBTableColumnIds.SMS_DATA_TABLE_NAME,                       //SmsData
+                DBTableColumnIds.SMS_DATA_TIMESTAMP,                time);  //time
 
         //Check that timestamp not in db then insert
         Cursor cursor = mDb.rawQuery(query,null);
@@ -2283,14 +2287,14 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     }
 
     /*
-        Check cid and lac is in Dbi_bts
+        Check cid and lac is in DBi_bts
         Replaces cellExists()
     */
     public boolean cellInDbiBts(int lac,int cellID){
         String query = String.format("SELECT * FROM %s WHERE %s = %d AND %s = %d",
-                DBTableColumnIds.DBI_BTS_TABLE_NAME,
-                DBTableColumnIds.DBI_BTS_LAC,                lac,
-                DBTableColumnIds.DBI_BTS_CID,                cellID);
+                DBTableColumnIds.DBI_BTS_TABLE_NAME,                    //DBi_bts
+                DBTableColumnIds.DBI_BTS_LAC,                lac,       //LAC
+                DBTableColumnIds.DBI_BTS_CID,                cellID);   //CID
 
         Cursor cursor = mDb.rawQuery(query,null);
         if(cursor.getCount() > 0)
@@ -2309,8 +2313,8 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
     */
     public boolean cellInDbiMeasure(int cellID){
         String query = String.format("SELECT * FROM %s WHERE %s = %d",
-                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,
-                DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID);
+                DBTableColumnIds.DBI_MEASURE_TABLE_NAME,                        //DB_measure
+                DBTableColumnIds.DBI_MEASURE_BTS_ID,                cellID);    //bts_id
 
         Cursor cursor = mDb.rawQuery(query,null);
         if(cursor.getCount() > 0)

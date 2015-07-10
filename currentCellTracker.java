@@ -50,6 +50,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.osmdroid.util.GeoPoint;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -151,7 +152,7 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
 
         dbHelper = new AIMSICDDbAdapter(context);
         if (!CELL_TABLE_CLEANSED) {
-            //TODO Eva what and why is this used
+            //TODO Eva what and why is this used why remove all cells from Dbi_bts table?
             //dbHelper.open();
             dbHelper.cleanseCellTable();
             //dbHelper.close();
@@ -603,7 +604,7 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
                     } else {
                         mChangedLAC = false;
                     }
-                    // Check if CellID (CID) is in DBe_import (OpenCell) database (issue #91)
+                    // Check if CellID (CID) is in DBe_import (OpenCell) database (issue #91) <---FIXED
                     if ( tinydb.getBoolean("ocid_downloaded") ) {
                         if (!dbHelper.openCellExists(mMonitorCell.getCID())) {
                             Log.i(mTAG, "ALERT: Connected to unknown CID not in DBe_import: " + mMonitorCell.getCID());
@@ -618,7 +619,6 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
                                     1,"CID not in DBe_import"
                                     );
                             //dbHelper.close();
-                            // Code Place-holder: TODO: Add to EventLog table!! NOW ADDED!!!!
 
                             mCellIdNotInOpenDb = true;
                             setNotification();
@@ -752,18 +752,55 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
                 case TelephonyManager.PHONE_TYPE_NONE:  // Maybe bad!
                 case TelephonyManager.PHONE_TYPE_SIP:   // Maybe bad!
                 case TelephonyManager.PHONE_TYPE_GSM:
+
                     GsmCellLocation gsmCellLocation = (GsmCellLocation) location;
                     if (gsmCellLocation != null) {
+                        //TODO @EVA where are we sending this setCellInfo data?
+
+                        //TODO
+                        /*@EVA
+                            Is it a good idea to dump all cells to db because if we spot a known cell
+                            with different lac then this will also be dump to db.
+
+                        */
                         mDevice.setCellInfo(
                                 gsmCellLocation.toString() +                // ??
                                         mDevice.getDataActivityTypeShort() + "|" +  // No,In,Ou,IO,Do
                                         mDevice.getDataStateShort() + "|" +         // Di,Ct,Cd,Su
                                         mDevice.getNetworkTypeName() + "|"          // TODO: Is "|" a typo?
                         );
+
                         mDevice.mCell.setLAC(gsmCellLocation.getLac());     // LAC
                         mDevice.mCell.setCID(gsmCellLocation.getCid());     // CID
-                        if (gsmCellLocation.getPsc() != -1)
+                        if (gsmCellLocation.getPsc() != -1) {
                             mDevice.mCell.setPSC(gsmCellLocation.getPsc()); // PSC
+                        }
+
+                        /*
+                            Add cell if gps is not enabled
+                            when gps enabled lat lon will be updated
+                            by function below
+
+                         */
+
+
+ /* TODO disabling cell insertion here because if we spot a known cell with a different lac it will still be dump to database
+                        mDevice.mCell.setLat(0.0);
+                        mDevice.mCell.setLon(0.0);
+                        mDevice.mCell.setAccuracy(0.0);
+                        mDevice.mCell.setBearing(0.0);
+
+                        mDevice.mCell.setTimingAdvance(0);
+                        mDevice.mCell.setNetType(tm.getNetworkType());
+
+                        String networkOperator = tm.getNetworkOperator();
+                        if (networkOperator != null) {
+                            mDevice.mCell.setMCC(Integer.parseInt(networkOperator.substring(0, 3)));
+                            mDevice.mCell.setMNC(Integer.parseInt(networkOperator.substring(3)));
+                        }
+
+                        dbHelper.insertBTS(mDevice);
+ */
 
                     }
                     break;
@@ -901,7 +938,7 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
      *
      */
     public void onLocationChanged(Location loc) {
-
+        //Log.i(mTAG, "in onLocationChanged(Location loc)");
         if (Build.VERSION.SDK_INT > 16) {
             DeviceApi17.loadCellInfo(tm, mDevice);
         }
@@ -926,9 +963,12 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
                         mDevice.mCell.setLAC(cdmaCellLocation.getNetworkId());     // NID
                         mDevice.mCell.setSID(cdmaCellLocation.getSystemId());      // SID
                         mDevice.mCell.setMNC(cdmaCellLocation.getSystemId());       // <== BUG!??     // MNC
+
+                        break;//Todo was was there no break here was this right?
                 }
             }
         }
+
 
         if (loc != null && (loc.getLatitude() != 0.0 && loc.getLongitude() != 0.0)) {
             mDevice.mCell.setLon(loc.getLongitude());       // gpsd_lon
@@ -946,7 +986,7 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
                             String.valueOf(loc.getLongitude()));
             prefsEditor.apply();
 
-            //TODO EVA this only logs data if gps is active is that right?
+//TODO this only logs a BTS if GPS has lock so no BTS's are logged otherwise?
             if (mTrackingCell) {
 
                 /*
@@ -957,7 +997,7 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
 
                     the other insertBTS functions inserts all data in the table
 
-                        public void insertBTS( String rat,
+                        public void insertBTS(
                            int mcc,
                            int mnc,
                            int lac,
@@ -967,10 +1007,14 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
                            int a5x,
                            int st_id,
                            String time_first,
-                           String time_last)
+                           String time_last,
+                           String gps_lat,
+                           String gps_lon);
 
                  */
+                //This also checks that the lac are cid are not in DB before inserting
                 dbHelper.insertBTS(mDevice);
+
 
             }
         }
@@ -1217,7 +1261,7 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
         }
 
         /* if it is an evDo network */
-        // TODO
+        //
         else {
             /* get network ID */
             if (tm != null) {
@@ -1290,8 +1334,8 @@ public class CellTracker implements SharedPreferences.OnSharedPreferenceChangeLi
 
         @Override
         public void onCellLocationChanged(CellLocation location) {
+
             handle();
-            Log.i(mTAG,"Cell info change");
         }
 
     };

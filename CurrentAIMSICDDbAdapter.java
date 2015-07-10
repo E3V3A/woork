@@ -64,6 +64,8 @@ import au.com.bytecode.opencsv.CSVWriter;
 
         TODO: What needs to be updated
 
+        prepareOpenCellUploadData() this needs to be updated and recoded
+
 
 
 
@@ -351,6 +353,7 @@ public class AIMSICDDbAdapter extends SQLiteOpenHelper{
      * Todo:        Change column name from OCID_SUBMITTED to isSubmitted
      */
     public Cursor getOPCIDSubmitData() {
+        //TODO this needs to be updated what is this returning because there is no OCID_SUBMITTED or isSubmitted in cellinfo/DBi_bts
         return mDb.query( DBTableColumnIds.DBI_BTS_TABLE_NAME,//TODO this inst working need to fix to get more data
                 new String[]{"Mcc", "Mnc", "Lac", "CellID", "Lng", "Lat", "Signal", "Timestamp",
                         "Accuracy", "Speed", "Direction", "NetworkType"}, "OCID_SUBMITTED <> 1",

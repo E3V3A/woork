@@ -16,6 +16,8 @@ import android.widget.Spinner;
 import com.SecUpwN.AIMSICD.R;
 import com.SecUpwN.AIMSICD.adapters.AIMSICDDbAdapter;
 import com.SecUpwN.AIMSICD.adapters.BaseInflaterAdapter;
+import com.SecUpwN.AIMSICD.adapters.BtsMeasureCardInflater;
+import com.SecUpwN.AIMSICD.adapters.BtsMeasureItemData;
 import com.SecUpwN.AIMSICD.adapters.CardItemData;
 import com.SecUpwN.AIMSICD.adapters.CellCardInflater;
 import com.SecUpwN.AIMSICD.adapters.DbViewerSpinnerAdapter;
@@ -221,26 +223,76 @@ public class DbViewerFragment extends Fragment {
                 }
 
                 case BTS_MEASUREMENTS: {
-                    BaseInflaterAdapter<CardItemData> adapter
-                            = new BaseInflaterAdapter<>(new CellCardInflater());
-                    int count = tableData.getCount();
+/*                    BaseInflaterAdapter<BtsMeasureItemData> adapter
+                            = new BaseInflaterAdapter<>(new BtsMeasureCardInflater());
+//                    int count = tableData.getCount();
+                    String[] tableColumnNames = {
+                            DBTableColumnIds.DBI_MEASURE_BTS_ID,
+                            DBTableColumnIds.DBI_MEASURE_NC_LIST,
+                            DBTableColumnIds.DBI_MEASURE_TIME,
+                            DBTableColumnIds.DBI_MEASURE_GPSD_LAT,
+                            DBTableColumnIds.DBI_MEASURE_GPSD_LON,
+                            DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY,
+                            DBTableColumnIds.DBI_MEASURE_BB_POWER,
+                            DBTableColumnIds.DBI_MEASURE_RX_SIGNAL,
+                            DBTableColumnIds.DBI_MEASURE_RAT,
+                            DBTableColumnIds.DBI_MEASURE_IS_SUBMITTED,
+                            DBTableColumnIds.DBI_MEASURE_IS_NEIGHBOUR,
+                    };
                     while (tableData.moveToNext()) {
-
-                        CardItemData data = new CardItemData(
-                                "CID: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BTS_ID))),
-                                "TIME: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_TIME)),
-                                "GPSD LAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_LAT)),
-                                "GPSD LON: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_LON)),
-                                "GPSD ACC: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY))),
-                                "RAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_RAT)),//THIS is new and was added
-                                "Avg Sig Str: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BB_POWER)),
-                                "" + (tableData.getPosition() + 1) + " / " + count);
+                        String[] btsMeasureColumns = new String[tableColumnNames.length];
+                        for (int i = 0; i < tableColumnNames.length; i++) {
+                            String columnName = tableColumnNames[i];
+                            btsMeasureColumns[i] = columnName + ": " + String.valueOf(tableData.getInt(tableData.getColumnIndex(columnName)));
+//                           "" + (tableData.getPosition() + 1) + " / " + count
+                        }
+                        BtsMeasureItemData data = new BtsMeasureItemData(btsMeasureColumns);
                         adapter.addItem(data, false);
                     }
                     if (!tableData.isClosed()) {
                         tableData.close();
                     }
                     return adapter;
+*/
+                    BaseInflaterAdapter<BtsMeasureItemData> adapter
+                            = new BaseInflaterAdapter<>(new BtsMeasureCardInflater());
+//                    int count = tableData.getCount();
+
+                    while (tableData.moveToNext()) {
+                        BtsMeasureItemData data = new BtsMeasureItemData(
+                                "BTS ID: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BTS_ID))),
+                                "NC LIST: ",// + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_NC_LIST)),
+                                "TIME: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_TIME)),
+                                "GPSD LAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_LAT)),
+                                "GPSD LON: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_LON)),
+                                "GPSD ACCU: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSD_ACCURACY))),
+ //                             "GPSE LAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSE_LAT)),
+      //                        "GPSE LON: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_GPSE_LON)),
+                                "BB POWER: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BB_POWER)),
+      //                        "BB RF TEMP: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BB_RF_TEMP)),
+      //                        "TX POWER: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_TX_POWER)),
+                                "RX SIGNAL: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_RX_SIGNAL)),
+      //                        "RX STYPE: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_RX_STYPE)),
+                                "RAT: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_RAT)),
+      //                        "BCCH: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BCCH)),
+      //                        "TMSI: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_TMSI)),
+       //                       "TA: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_TA))),
+        //                      "PD: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_PD))),
+      //                        "BER: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_BER))),
+      //                        "AVG EC NO: " + tableData.getString(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_AVG_EC_NO)),
+                                "IS SUBMITTED: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_IS_SUBMITTED))),
+                                "IS NEIGHBOUR: " + String.valueOf(tableData.getInt(tableData.getColumnIndex(DBTableColumnIds.DBI_MEASURE_IS_NEIGHBOUR)))
+
+                                //"" + (tableData.getPosition() + 1) + " / " + count
+
+                        );
+                        adapter.addItem(data, false);
+                    }
+                    if (!tableData.isClosed()) {
+                        tableData.close();
+                    }
+                    return adapter;
+
                 }
 
                 case IMPORTED_OCID_DATA: {
@@ -293,7 +345,7 @@ public class DbViewerFragment extends Fragment {
                 case DEFAULT_MCC_LOCATIONS: {
 
                     // Table:   defaultlocation
-                    BaseInflaterAdapter<CardItemData> adapter
+                   BaseInflaterAdapter<CardItemData> adapter
                             = new BaseInflaterAdapter<>(new DefaultLocationCardInflater());
                     int count = tableData.getCount();
                     while (tableData.moveToNext()) {

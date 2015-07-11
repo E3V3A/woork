@@ -422,7 +422,7 @@ public class MapViewerOsmDroid extends BaseActivity implements OnSharedPreferenc
                 //TODO this was the old function that returned all bts for all networks
                 //loadOpenCellIDMarkers();
 
-                //Todo new function only gets bts from DBe_import be sim network
+                //new function only gets bts from DBe_import by sim network
                 loadOcidMarkersByNetwork();
 
                 LinkedList<CellTowerMarker> items = new LinkedList<>();

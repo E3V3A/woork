@@ -1,7 +1,7 @@
 /*
 =======================================================================
 FileName:	aimsicd.sql
-Version:	0.2
+Version:	0.3
 Formatting:	8 char TAB, ASCII, UNIX EOL
 Author:		E:V:A (Team AIMSICD)
 Date:		2015-01-24

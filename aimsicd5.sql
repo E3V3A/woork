@@ -1,11 +1,11 @@
 /*
 =======================================================================
 FileName:	aimsicd.sql
-Version:	0.3
+Version:	0.4
 Formatting:	8 char TAB, ASCII, UNIX EOL
 Author:		E:V:A (Team AIMSICD)
 Date:		2015-01-24
-Last:		2015-07-18
+Last:		2015-07-20
 Info:		https://github.com/SecUpwN/Android-IMSI-Catcher-Detector
 =======================================================================
 
@@ -51,11 +51,6 @@ Developer Notes:
 	   pre-cresated and populated. This is no longer needed (?) 
 	   and handled automatically by AOS.
 
-TODO:
-	[ ] Use REAL for all GPS lat/lon columns
-	[ ] Use INTEGER for all time/date related columns
-
-
 ChangeLog:
 
 	2015-01-24	E:V:A	Removed PK/FK on EventLog Table:
@@ -63,6 +58,9 @@ ChangeLog:
 				REFERENCES "DetectionFlags"("_id")
 	2015-07-18	E:V:A	Updated THIS schema to match recent DB overhaul PR.
 				and changed all time/date related data types to use INTEGER
+	2015-07-20	E:V:A	Made all GPS related data types REAL
+				Made all (except SmsData) time/date related data types INTEGER
+
 
 =======================================================================
 */
@@ -82,7 +80,7 @@ ChangeLog:
 --  START
 -- ========================================================
 
-PRAGMA foreign_keys=OFF;
+PRAGMA foreign_keys=OFF;	-- This should probably be ON, eventually
 BEGIN TRANSACTION;
 
 -- ========================================================
@@ -104,9 +102,7 @@ DROP TABLE IF EXISTS "DBi_bts";
 DROP TABLE IF EXISTS "DBi_measure";
 DROP TABLE IF EXISTS "DetectionFlags";
 DROP TABLE IF EXISTS "SectorType";
-
 DROP TABLE IF EXISTS "SmsData";		-- formerly silentsms
--- DROP TABLE IF EXISTS "silentsms";
 
 -- ========================================================
 -- CREATE new tables 
@@ -118,10 +114,10 @@ CREATE TABLE "android_metadata"  (
 
 CREATE TABLE "defaultlocation"  ( 
 	"_id"     	INTEGER PRIMARY KEY,
-	"country"	TEXT,
-	"MCC"    	INTEGER,
-	"lat"    	TEXT,			-- consider REAL ?
-	"lon"    	TEXT			-- consider REAL ?
+	"country"	TEXT,			--
+	"MCC"    	INTEGER,		-- 
+	"lat"    	REAL,			-- 
+	"lon"    	REAL			-- 
 	);
 
 CREATE TABLE "API_keys"  ( 
@@ -129,8 +125,8 @@ CREATE TABLE "API_keys"  (
 	"name"    	TEXT,			-- 
 	"type"    	TEXT,			-- 
 	"key"     	TEXT,			-- 
-	"time_add"	TEXT,			-- 
-	"time_exp"	TEXT			-- 
+	"time_add"	INTEGER,		-- 
+	"time_exp"	INTEGER			-- 
 	);
 
 CREATE TABLE "CounterMeasures"  ( 
@@ -160,12 +156,12 @@ CREATE TABLE "DBe_import"  (
 	"LAC"       	INTEGER,		-- 
 	"CID"       	INTEGER,		-- 
 	"PSC"       	INTEGER,		-- 
-	"gps_lat"   	TEXT,			-- consider REAL ?
-	"gps_lon"   	TEXT,			-- consider REAL ?
+	"gps_lat"   	REAL,			-- 
+	"gps_lon"   	REAL,			-- 
 	"isGPSexact"	INTEGER,		-- 
 	"avg_range" 	INTEGER,		-- 
-	"avg_signal"	INTEGER,		-- Does this need to be REAL for "-nn" [dBm]
-	"samples"   	INTEGER,		-- Does this need to be REAL for "-1"
+	"avg_signal"	INTEGER,		-- [dBm]  Does this need to be REAL for "-nn"?
+	"samples"   	INTEGER,		--        Does this need to be REAL for "-1"
 	"time_first"	INTEGER,		-- * Does not exsist in OCID 
 	"time_last" 	INTEGER,		-- * Does not exsist in OCID 
 	"rej_cause" 	INTEGER			-- * Updated by the DB consistency check
@@ -190,32 +186,31 @@ CREATE TABLE "DBi_bts"  (
 
 CREATE TABLE "DBi_measure"  ( 
 	"_id"           INTEGER PRIMARY KEY AUTOINCREMENT,
-	"bts_id"       	INTEGER NOT NULL,	-- 
-	"nc_list"      	TEXT,			-- 
-	"time"         	INTEGER NOT NULL,	-- 
-	"gpsd_lat"     	TEXT NOT NULL,		-- Device GPS	-- consider REAL DEFAULT 0.0
-	"gpsd_lon"     	TEXT NOT NULL,		-- Device GPS 	-- consider REAL DEFAULT 0.0
+	"bts_id"       	INTEGER NOT NULL,	-- DBi_bts:_id
+	"nc_list"      	TEXT,			-- Neighboring Cells List (TODO: specify content)
+	"time"         	INTEGER NOT NULL,	-- [s]
+	"gpsd_lat"     	REAL,			-- Device GPS (allow NULL)
+	"gpsd_lon"     	REAL,			-- Device GPS (allow NULL)
 	"gpsd_accu"	INTEGER,		-- Device GPS position accuracy [m]
-	"gpse_lat"     	TEXT,			-- Exact GPS 	-- consider REAL
-	"gpse_lon"     	TEXT,			-- Exact GPS 	-- consider REAL
+	"gpse_lat"     	REAL,			-- Exact GPS
+	"gpse_lon"     	REAL,			-- Exact GPS
 	"bb_power"     	TEXT,			-- [mW] or [mA]
 	"bb_rf_temp"   	TEXT,			-- [C]
 	"tx_power"     	TEXT,			-- [dBm]
 	"rx_signal"    	TEXT,			-- [dBm] or ASU
 	"rx_stype"     	TEXT,			-- Reveived Signal power Type [RSSI, ...] etc.
 	"RAT"		TEXT NOT NULL,		-- Radio Access Technology 
-	"BCCH"         	TEXT,			-- 
-	"TMSI"         	TEXT,			-- 
-	"TA"           	INTEGER DEFAULT 0,	-- Timing Advance (GSM, LTE)
-	"PD"           	INTEGER DEFAULT 0,	-- Propagation Delay (LTE)	
-	"BER"          	INTEGER DEFAULT 0,	-- Bit Error Rate		
-	"AvgEcNo"      	TEXT,			-- Average Ec/No 
+	"BCCH"         	TEXT,			-- Broadcast Channel		-- consider INTEGER
+	"TMSI"         	TEXT,			-- Temporary IMSI (hex)
+	"TA"           	INTEGER DEFAULT 0,	-- Timing Advance (GSM, LTE)	-- allow NULL
+	"PD"           	INTEGER DEFAULT 0,	-- Propagation Delay (LTE)	-- allow NULL
+	"BER"          	INTEGER DEFAULT 0,	-- Bit Error Rate		-- allow NULL
+	"AvgEcNo"      	TEXT,			-- Average Ec/No		-- consider REAL
 	"isSubmitted"  	INTEGER DEFAULT 0,	-- * Has been submitted to OCID/MLS etc?
 	"isNeighbour"  	INTEGER DEFAULT 0,	-- * Is a neighboring BTS? [Is this what we want?]
 	FOREIGN KEY("bts_id")			-- 
 	REFERENCES "DBi_bts"("_id")		-- 
 	);
-
 
 CREATE TABLE "DetectionFlags"  ( 
 	"_id"         	INTEGER PRIMARY KEY,
@@ -254,7 +249,7 @@ CREATE TABLE "SectorType"  (
 
 CREATE TABLE "SmsData"  ( 
 	"_id"     	INTEGER PRIMARY KEY AUTOINCREMENT,
-	"time"   	INTEGER,		-- 
+	"time"   	TEXT,			-- !! This is the only time which remain TEXT !!
 	"number"	TEXT,			-- 
 	"smsc"		TEXT,			-- 
 	"message"	TEXT,			-- 
@@ -275,10 +270,13 @@ CREATE TABLE "DetectionStrings"  (
 	);   
 
 -- ========================================================
--- CREATE some VIEWs
+-- CREATE some VIEW's
 -- ========================================================
 
 
+-- ========================================================
+-- CREATE some INDEX'es
+-- ========================================================
 
 
 -- ========================================================
@@ -287,6 +285,7 @@ CREATE TABLE "DetectionStrings"  (
 
 -- INSERT INTO "android_metadata" VALUES ('en_US');
 -- INSERT INTO "SmsData" VALUES (1,"2015-01-24 21:00:00",ADREZZ,DizzPlay,CLAZZ,ZMZC,DaTestMessage);
+
 
 
 -- ========================================================

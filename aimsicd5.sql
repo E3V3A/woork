@@ -1,11 +1,11 @@
 /*
 =======================================================================
 FileName:	aimsicd.sql
-Version:	0.4
+Version:	0.5
 Formatting:	8 char TAB, ASCII, UNIX EOL
 Author:		E:V:A (Team AIMSICD)
 Date:		2015-01-24
-Last:		2015-07-20
+Last:		2015-07-31
 Info:		https://github.com/SecUpwN/Android-IMSI-Catcher-Detector
 =======================================================================
 
@@ -51,6 +51,42 @@ Developer Notes:
 	   pre-cresated and populated. This is no longer needed (?) 
 	   and handled automatically by AOS.
 
+	d) PSC is used to identify different WCDMA cells on the downlink 
+	   while Secondary Scrambling Codes are used to differentiate
+	   UE on the uplink. 
+
+	   So is the AOS provided PSC, the Uplink (UL) or the Downlink (DL) PSC? 
+	   - PSC in the downlink seperate cells, while in the uplink they seperate users.
+	   - Each cell has a different scrambling code on downlink, while on uplink each 
+	     user has a different scrambling code.
+
+	e) The SQL foreign key constraint is used to enforce the relationship 
+	   between the DBi_bts and the DBi_measure table. When enabled, the 
+	   constraint is enforced by SQLite. Attempting to insert a row into 
+	   the DBi_measure table that does not correspond to any row in the 
+	   DBi_bts table will fail, as will attempting to delete a row from 
+	   the DBi_bts table when there exist dependent rows in the 
+	   DBi_measure table .
+	
+	   Foreign key constraints are disabled by default (for backwards 
+	   compatibility), so must be enabled separately for each database 
+	   connection. To test the foreign_keys PRAGMA status, use:
+
+		sqlite> PRAGMA foreign_keys;
+	   
+	   To enable the foreign key constraints in the SQLite DB, use:
+
+		sqlite> PRAGMA foreign_keys=ON;
+
+	   For details and more advanced use, see [2].
+
+	f) PRAGMA cache_spill=1 has the side-effect of acquiring an EXCLUSIVE 
+	   lock on the database file. Hence, some applications that have large 
+	   long-running transactions may want to disable cache spilling in 
+	   order to prevent the application from acquiring an exclusive lock 
+	   on the database until the moment that the transaction COMMITs.
+
+
 ChangeLog:
 
 	2015-01-24	E:V:A	Removed PK/FK on EventLog Table:
@@ -66,13 +102,17 @@ ChangeLog:
 */
 
 -- ========================================================
---  Special Table Notes
+--  Special Reference Notes
 -- ========================================================
 /* 
   DBe_capabilities:
   [1] http://en.wikipedia.org/wiki/Cellular_network#Coverage_comparison_of_different_frequencies
 
+  SQLite foreign keys usage:
+  [2] https://www.sqlite.org/foreignkeys.html
 
+  SQLite PRAGMA Statements:
+  [3] https://www.sqlite.org/pragma.html
 
 */
 
@@ -80,7 +120,14 @@ ChangeLog:
 --  START
 -- ========================================================
 
-PRAGMA foreign_keys=OFF;	-- This should probably be ON, eventually
+-- // Enable some PRAGMA's
+
+PRAGMA foreign_keys=ON;			-- 0 by default, Enforce foreign key constraints 
+-- PRAGMA page_size=bytes;		-- 1024 by default, increase for huge tables
+-- PRAGMA cache_size=pages; 		-- 0 by default TEMP, otherwise ~2000
+-- PRAGMA cache_spill=boolean; 		-- 1 by default, disable to prevent locks
+-- PRAGMA threads=N;			-- 0 by default, enable for more threads
+
 BEGIN TRANSACTION;
 
 -- ========================================================
@@ -102,7 +149,7 @@ DROP TABLE IF EXISTS "DBi_bts";
 DROP TABLE IF EXISTS "DBi_measure";
 DROP TABLE IF EXISTS "DetectionFlags";
 DROP TABLE IF EXISTS "SectorType";
-DROP TABLE IF EXISTS "SmsData";		-- formerly silentsms
+DROP TABLE IF EXISTS "SmsData";
 
 -- ========================================================
 -- CREATE new tables 
@@ -174,14 +221,14 @@ CREATE TABLE "DBi_bts"  (
 	"MNC"       	INTEGER NOT NULL,	-- 
 	"LAC"       	INTEGER NOT NULL,	-- 
 	"CID"       	INTEGER NOT NULL,	-- 
-	"PSC"       	INTEGER,		-- 
+	"PSC"       	INTEGER,		--	-- Does AOS API provide the UL or DL PSC?
 	"T3212"     	INTEGER DEFAULT 0,	-- Fix java to allow null here
 	"A5x"       	INTEGER DEFAULT 0,	-- Fix java to allow null here
 	"ST_id"     	INTEGER DEFAULT 0,	-- Fix java to allow null here
-	"time_first"	INTEGER,		-- 
-	"time_last" 	INTEGER,		-- 
-	"gps_lat"       REAL NOT NULL,		--
-        "gps_lon"       REAL NOT NULL		--
+	"time_first"	INTEGER NOT NULL,	-- 
+	"time_last" 	INTEGER NOT NULL,	-- 
+	"gps_lat"       REAL,			-- Exact GPS, either from DBi_import (when available) or by manual placement
+        "gps_lon"       REAL			-- Exact GPS, either from DBi_import (when available) or by manual placement
 	);
 
 CREATE TABLE "DBi_measure"  ( 
@@ -192,22 +239,21 @@ CREATE TABLE "DBi_measure"  (
 	"gpsd_lat"     	REAL,			-- Device GPS (allow NULL)
 	"gpsd_lon"     	REAL,			-- Device GPS (allow NULL)
 	"gpsd_accu"	INTEGER,		-- Device GPS position accuracy [m]
-	"gpse_lat"     	REAL,			-- Exact GPS
-	"gpse_lon"     	REAL,			-- Exact GPS
-	"bb_power"     	TEXT,			-- [mW] or [mA]
-	"bb_rf_temp"   	TEXT,			-- [C]
-	"tx_power"     	TEXT,			-- [dBm]
-	"rx_signal"    	TEXT,			-- [dBm] or ASU
+	"bb_power"     	INTEGER,		-- [mW] or [mA]		(from BP power rail usage)
+	"bb_rf_temp"   	INTEGER,		-- [C]			(from BP internal thermistor)
+	"tx_power"     	INTEGER,		-- [dBm]		(from BP )
+	"rx_signal"    	INTEGER,		-- [dBm] or ASU		(from API or BP) -- Consider REAL (usually negative)
 	"rx_stype"     	TEXT,			-- Reveived Signal power Type [RSSI, ...] etc.
-	"RAT"		TEXT NOT NULL,		-- Radio Access Technology 
-	"BCCH"         	TEXT,			-- Broadcast Channel		-- consider INTEGER
+	"RAT"		INTEGER NOT NULL,	-- Radio Access Technology 
+	"BCCH"         	INTEGER,		-- Broadcast Channel
 	"TMSI"         	TEXT,			-- Temporary IMSI (hex)
 	"TA"           	INTEGER DEFAULT 0,	-- Timing Advance (GSM, LTE)	-- allow NULL
 	"PD"           	INTEGER DEFAULT 0,	-- Propagation Delay (LTE)	-- allow NULL
 	"BER"          	INTEGER DEFAULT 0,	-- Bit Error Rate		-- allow NULL
-	"AvgEcNo"      	TEXT,			-- Average Ec/No		-- consider REAL
+	"AvgEcNo"      	INTEGER DEFAULT 0,	-- Average Ec/No		-- consider REAL? Why?
 	"isSubmitted"  	INTEGER DEFAULT 0,	-- * Has been submitted to OCID/MLS etc?
 	"isNeighbour"  	INTEGER DEFAULT 0,	-- * Is a neighboring BTS? [Is this what we want?]
+	"con_state"	TEXT NOT NULL,		-- AOS: DATA_ACTIVITY/CONNECTION and CALL/SERVICE_STATE	
 	FOREIGN KEY("bts_id")			-- 
 	REFERENCES "DBi_bts"("_id")		-- 
 	);
@@ -249,7 +295,7 @@ CREATE TABLE "SectorType"  (
 
 CREATE TABLE "SmsData"  ( 
 	"_id"     	INTEGER PRIMARY KEY AUTOINCREMENT,
-	"time"   	TEXT,			-- !! This is the only time which remain TEXT !!
+	"time"   	INTEGER NOT NULL,	-- 
 	"number"	TEXT,			-- 
 	"smsc"		TEXT,			-- 
 	"message"	TEXT,			-- 
